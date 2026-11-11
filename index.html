@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183a43">
+  <title>教學智匯｜教師 AI 教學顧問</title>
+  <style>
+    :root{
+      --ink:#20343a;--muted:#718187;--line:#e4eae8;--paper:#f5f7f5;--white:#fff;
+      --navy:#183a43;--navy2:#244c55;--teal:#3f827c;--teal-pale:#eaf4f1;
+      --gold:#c7954f;--gold-pale:#fbf4e8;--blue-pale:#edf3f7;--red:#b65d56;
+      --shadow:0 12px 32px rgba(23,54,61,.07);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;font-size:14px;line-height:1.6}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit}
+    .app{min-height:100vh;display:grid;grid-template-columns:252px minmax(0,1fr)}
+    .sidebar{background:var(--navy);color:#eaf2f0;padding:25px 17px;display:flex;flex-direction:column;min-height:100vh;position:sticky;top:0;height:100vh}
+    .brand{display:flex;align-items:center;gap:12px;padding:4px 9px 27px;border-bottom:1px solid rgba(255,255,255,.13)}
+    .brand-mark{width:39px;height:39px;border-radius:13px;background:#d6e8df;color:var(--navy);display:grid;place-items:center;font-size:20px;font-weight:800}
+    .brand-name{font-size:17px;font-weight:800;letter-spacing:.04em}.brand-sub{font-size:10px;color:#aac0bd;letter-spacing:.12em;margin-top:1px}
+    .nav-label{font-size:10px;color:#8fa9a7;letter-spacing:.16em;margin:26px 10px 10px}
+    .nav{display:grid;gap:6px}
+    .nav button{border:0;background:transparent;color:#c2d2d0;text-align:left;padding:11px 12px;border-radius:11px;display:flex;align-items:center;gap:11px;transition:.18s}
+    .nav button:hover{background:rgba(255,255,255,.08);color:#fff}.nav button.active{background:#315b61;color:#fff;box-shadow:inset 3px 0 #d7bd8c}
+    .nav-ico{width:20px;text-align:center;font-size:16px}
+    .side-bottom{margin-top:auto}.workspace-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px;margin:12px 3px 0}
+    .workspace-card strong{display:block;font-size:12px}.workspace-card p{color:#a9c0bd;font-size:11px;margin:5px 0 10px}.workspace-chip{font-size:10px;background:rgba(215,189,140,.17);color:#e8d1a9;border-radius:30px;padding:4px 8px;display:inline-block}
+    .main{min-width:0}.topbar{height:72px;background:rgba(255,255,255,.88);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 36px;position:sticky;top:0;z-index:5;backdrop-filter:blur(12px)}
+    .crumb{font-size:12px;color:var(--muted)}.crumb b{color:var(--ink);font-weight:700}.top-actions{display:flex;gap:10px;align-items:center}.version-tag{font-size:11px;border:1px solid #dce7e2;color:#56736e;background:#f5faf7;padding:6px 10px;border-radius:30px}.avatar{height:34px;width:34px;display:grid;place-items:center;border-radius:50%;background:#dceae4;color:#315d57;font-weight:800}
+    .content{max-width:1440px;margin:0 auto;padding:32px 36px 56px}.page{display:none}.page.active{display:block;animation:fade .22s ease}@keyframes fade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .eyebrow{font-size:10px;font-weight:800;letter-spacing:.18em;color:var(--teal);text-transform:uppercase}.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:25px}.page-head h1{font-size:27px;line-height:1.25;margin:7px 0 8px;letter-spacing:-.03em}.page-head p{margin:0;color:var(--muted);max-width:700px}.head-actions{display:flex;gap:9px;flex-wrap:wrap}
+    .btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 14px;border-radius:10px;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.18s;text-decoration:none}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(20,55,60,.08)}.btn.primary{background:var(--navy);color:white;border-color:var(--navy)}.btn.primary:hover{background:var(--navy2)}.btn.soft{background:var(--teal-pale);border-color:#dcece6;color:#32665f}.btn.small{padding:6px 9px;font-size:11px}.btn.danger{color:var(--red);border-color:#f0d8d5}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+    .notice{border:1px solid #eadfc9;background:#fffaf1;border-radius:13px;padding:12px 15px;display:flex;gap:10px;align-items:flex-start;color:#79633f;font-size:12px;margin-bottom:22px}.notice strong{color:#6d542d}.notice .notice-icon{font-size:17px;line-height:1.2}
+    .grid{display:grid;gap:18px}.grid.two{grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr)}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.card-pad{padding:21px}.card-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px}.card-title h2,.card-title h3{margin:0;font-size:15px}.card-title p{margin:3px 0 0;font-size:11px;color:var(--muted)}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{min-width:0}.field.full{grid-column:1/-1}.field label{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;color:#4c6267;margin-bottom:6px}.field label span{color:#9aa7a7;font-weight:500}.field input,.field select,.field textarea{width:100%;border:1px solid #dfe7e4;background:#fbfcfb;border-radius:10px;padding:10px 11px;color:var(--ink);outline:none;transition:.15s}.field input:focus,.field select:focus,.field textarea:focus{border-color:#75a69b;box-shadow:0 0 0 3px rgba(63,130,124,.1);background:#fff}.field textarea{min-height:84px;resize:vertical}.field textarea.tall{min-height:112px}.form-foot{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:16px;margin-top:17px}.hint{font-size:10px;color:#8a999a}.result-placeholder{height:100%;min-height:370px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;color:var(--muted)}.placeholder-icon{width:65px;height:65px;border-radius:22px;background:var(--teal-pale);display:grid;place-items:center;font-size:27px;color:var(--teal);margin-bottom:15px}.result-placeholder h3{color:var(--ink);margin:0 0 7px;font-size:16px}.result-placeholder p{max-width:280px;font-size:12px;margin:0}
+    .result-panel{display:none}.result-panel.show{display:block}.result-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:15px}.result-head h2{font-size:17px;margin:0}.result-head p{font-size:11px;color:var(--muted);margin:4px 0}.result-section{border-top:1px solid var(--line);padding:14px 0}.result-section:first-of-type{border-top:0}.result-section h3{font-size:12px;margin:0 0 8px;color:#315d57;display:flex;gap:7px;align-items:center}.result-section p,.result-section li{font-size:12px;color:#52656a}.result-section ul{padding-left:18px;margin:6px 0}.pill{display:inline-flex;align-items:center;background:#f0f5f2;color:#52756d;font-size:10px;font-weight:700;padding:4px 8px;border-radius:30px;margin:2px 4px 2px 0}.pill.gold{background:var(--gold-pale);color:#98743f}.pill.blue{background:var(--blue-pale);color:#59758a}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0}.stat{padding:16px 18px}.stat small{font-size:10px;color:var(--muted)}.stat strong{display:block;font-size:21px;margin-top:4px}.stat .stat-note{font-size:10px;color:#81918f;margin-top:1px}
+    .source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.source-card{padding:17px;display:flex;flex-direction:column;min-height:180px}.source-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.source-icon{width:35px;height:35px;display:grid;place-items:center;background:var(--blue-pale);border-radius:11px;font-size:17px}.source-card h3{font-size:13px;margin:12px 0 5px}.source-card p{font-size:11px;color:var(--muted);margin:0 0 13px}.source-card .source-link{margin-top:auto;color:var(--teal);font-size:11px;font-weight:800;text-decoration:none}.source-card .source-link:hover{text-decoration:underline}
+    .table-wrap{overflow:auto}.data-table{width:100%;border-collapse:collapse;min-width:600px}.data-table th{text-align:left;font-size:10px;color:#809094;font-weight:700;padding:10px 12px;background:#f8faf9}.data-table td{padding:13px 12px;border-top:1px solid var(--line);font-size:11px;vertical-align:middle}.empty{text-align:center;color:#91a09f;padding:35px 12px!important}
+    .status{display:inline-flex;border-radius:30px;padding:4px 8px;font-size:10px;font-weight:800;white-space:nowrap}.status.pending{background:#fff4de;color:#9b7539}.status.approved{background:#e8f4ed;color:#4f8064}.status.draft{background:#edf2f5;color:#6c8190}
+    .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.step{border:1px solid var(--line);border-radius:13px;padding:14px}.step-num{font-size:10px;color:var(--teal);font-weight:900;letter-spacing:.12em}.step h3{font-size:12px;margin:6px 0}.step p{font-size:10px;color:var(--muted);margin:0}
+    .saved-item{padding:12px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}.saved-item:first-of-type{border-top:0}.saved-item strong{display:block;font-size:11px}.saved-item small{font-size:10px;color:var(--muted)}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(17,39,43,.45);z-index:20;display:none;align-items:center;justify-content:center;padding:18px}.modal-backdrop.open{display:flex}.modal{width:min(580px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.2)}.modal-head{padding:19px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.modal-head h2{font-size:15px;margin:0}.modal-body{padding:21px 22px}.modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}.icon-btn{border:0;background:#f2f5f3;border-radius:8px;width:30px;height:30px;font-size:17px;color:#617579}
+    .toast{position:fixed;right:22px;bottom:22px;background:#203f45;color:white;border-radius:11px;padding:11px 15px;box-shadow:var(--shadow);font-size:12px;opacity:0;transform:translateY(10px);transition:.2s;z-index:30;pointer-events:none}.toast.show{opacity:1;transform:none}
+    .footer-note{text-align:center;font-size:10px;color:#9aa7a6;margin-top:30px}
+    @media(max-width:1050px){.app{grid-template-columns:220px minmax(0,1fr)}.content{padding:27px 23px}.topbar{padding:0 23px}.grid.two{grid-template-columns:1fr}.result-placeholder{min-height:230px}}
+    @media(max-width:720px){.app{display:block}.sidebar{position:relative;height:auto;min-height:0;padding:12px 14px}.brand{padding:2px 4px 12px;border:0}.nav-label,.side-bottom{display:none}.nav{display:flex;overflow-x:auto;padding-top:9px}.nav button{white-space:nowrap;padding:8px 10px;font-size:11px}.nav-ico{width:auto}.topbar{height:54px;padding:0 16px}.content{padding:23px 14px 40px}.page-head{display:block}.head-actions{margin-top:14px}.page-head h1{font-size:23px}.grid.three,.stats{grid-template-columns:1fr}.form-grid,.source-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.steps{grid-template-columns:1fr}.form-foot{align-items:flex-start;flex-direction:column}.form-foot .btn{width:100%}.top-actions .version-tag{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">智</div><div><div class="brand-name">教學智匯</div><div class="brand-sub">TEACHING INSIGHT LAB</div></div></div>
+    <div class="nav-label">工作空間 WORKSPACE</div>
+    <nav class="nav" aria-label="主要導覽">
+      <button class="active" data-page="consult"><span class="nav-ico">✦</span>教學設計諮詢</button>
+      <button data-page="library"><span class="nav-ico">▤</span>課綱與法規資料</button>
+      <button data-page="updates"><span class="nav-ico">↻</span>資料更新審核</button>
+      <button data-page="saved"><span class="nav-ico">▣</span>我的教學草稿</button>
+    </nav>
+    <div class="side-bottom"><div class="nav-label">目前方案</div><div class="workspace-card"><strong>個人測試工作區</strong><p>資料先保存在目前瀏覽器，尚未啟用雲端同步。</p><span class="workspace-chip">之後可擴充教師共用</span></div></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div class="crumb">教學智匯　/　<b id="crumbTitle">教學設計諮詢</b></div><div class="top-actions"><span class="version-tag">介面原型 v0.1</span><div class="avatar" title="個人工作區">師</div></div></header>
+    <div class="content">
+      <!-- PAGE: CONSULT -->
+      <section class="page active" id="page-consult">
+        <div class="page-head"><div><div class="eyebrow">Teaching Design Consultant</div><h1>把教學想法，變成可實踐的課堂設計。</h1><p>從你的教學構想出發，整理學習目標、活動流程、評量方式與差異化策略，讓備課更有方向。</p></div><div class="head-actions"><button class="btn" id="fillDemo">填入示範案例</button><button class="btn soft" id="clearForm">清空表單</button></div></div>
+        <div class="notice"><span class="notice-icon">ⓘ</span><div><strong>目前是前端介面測試版。</strong>「產生示範分析」使用瀏覽器內建範例邏輯，不會呼叫 Gemini 或其他 AI；內容只用來測試操作與版面，不能當成正式教案或法規判定。</div></div>
+        <div class="grid two">
+          <section class="card card-pad">
+            <div class="card-title"><div><h2>01｜描述你的教學情境</h2><p>提供越清楚的背景，後續 AI 顧問越能給出貼近現場的建議。</p></div><span class="pill">教學諮詢</span></div>
+            <form id="consultForm">
+              <div class="form-grid">
+                <div class="field"><label for="stage">教育階段</label><select id="stage"><option>國小</option><option selected>國中</option></select></div>
+                <div class="field"><label for="grade">年級</label><select id="grade"><option>一年級</option><option>二年級</option><option selected>七年級</option><option>八年級</option><option>九年級</option></select></div>
+                <div class="field"><label for="subject">領域／科目</label><select id="subject"><option>語文－國語文</option><option>語文－英語文</option><option>數學</option><option>自然科學</option><option>社會</option><option>藝術</option><option>綜合活動</option><option>科技</option><option>健康與體育</option><option>其他／跨領域</option></select></div>
+                <div class="field"><label for="duration">課程節數</label><select id="duration"><option>1 節（45 分鐘）</option><option selected>2 節（90 分鐘）</option><option>3 節（135 分鐘）</option><option>4 節（180 分鐘）</option><option>單元課程／跨週</option></select></div>
+                <div class="field full"><label for="topic">課程主題 <span>必填</span></label><input id="topic" required placeholder="例如：從生活垃圾認識循環經濟"></div>
+                <div class="field full"><label for="goals">希望學生學會什麼？ <span>可貼上課綱或自訂目標</span></label><textarea id="goals" placeholder="例如：能辨識常見回收標誌，並說明分類的理由。"></textarea></div>
+                <div class="field full"><label for="context">班級與學生特性</label><textarea id="context" placeholder="例如：28 人；學生程度差異較大，部分學生需要圖像提示與分段指令。"></textarea></div>
+                <div class="field full"><label for="idea">目前的教學構想／遇到的困難</label><textarea class="tall" id="idea" placeholder="描述你想採用的活動、教材、時間限制，或最想請顧問協助的問題……"></textarea></div>
+                <div class="field full"><label for="focus">這次最希望顧問優先協助</label><select id="focus"><option>完整規劃教學流程</option><option>檢視學習目標與評量是否一致</option><option>增加學生參與與探究活動</option><option>差異化教學與特殊需求支持</option><option>對照 108 課綱檢視課程設計</option><option>檢視相關教育法規與行政風險</option></select></div>
+              </div>
+              <div class="form-foot"><span class="hint">＊請勿輸入學生姓名、身分證字號或其他可識別個資。</span><button class="btn primary" type="submit">✦ 產生示範分析</button></div>
+            </form>
+          </section>
+          <section class="card card-pad">
+            <div class="card-title"><div><h2>02｜顧問分析結果</h2><p>示範呈現未來 AI 回覆的組織方式。</p></div><span class="pill gold">示範內容</span></div>
+            <div class="result-placeholder" id="resultPlaceholder"><div class="placeholder-icon">✧</div><h3>你的教學顧問已準備就緒</h3><p>先填寫左側的課程情境，再按下「產生示範分析」，看看完整回覆預計如何呈現。</p></div>
+            <div class="result-panel" id="resultPanel" aria-live="polite">
+              <div class="result-head"><div><h2 id="resultTitle">教學設計建議</h2><p id="resultMeta">國中・七年級・示範分析</p></div><span class="status draft">介面示範</span></div>
+              <div class="result-section"><h3>✦ 一、教學方向摘要</h3><p id="resultSummary"></p><span class="pill">以學生為中心</span><span class="pill">素養導向</span><span class="pill blue">形成性評量</span></div>
+              <div class="result-section"><h3>◎ 二、建議學習目標</h3><ul id="resultGoals"></ul></div>
+              <div class="result-section"><h3>▤ 三、課堂流程建議</h3><ul id="resultFlow"></ul></div>
+              <div class="result-section"><h3>✓ 四、評量與回饋</h3><ul id="resultAssessment"></ul></div>
+              <div class="result-section"><h3>◇ 五、差異化與支持策略</h3><p id="resultDifferentiation"></p></div>
+              <div class="result-section"><h3>⚑ 六、課綱／法規檢核提醒</h3><p>正式版本應先檢索適用的課綱條文與現行法規，並列出條文名稱、條次、有效日期及官方來源。本示範不引用或判定任何具體條文。</p></div>
+              <div class="result-section"><h3>？七、尚待確認的資訊</h3><ul><li>學生先備知識與本單元的連結。</li><li>學校既有課程計畫、領域／議題融入及評量規範。</li><li>教材版本、可用設備與實際授課時間。</li></ul></div>
+              <div class="head-actions"><button class="btn primary" id="saveDraft">▣ 儲存到我的草稿</button><button class="btn" id="exportResult">匯出文字檔</button></div>
+            </div>
+          </section>
+        </div>
+        <div class="stats">
+          <div class="card stat"><small>目前諮詢模式</small><strong>教學設計顧問</strong><div class="stat-note">先從教師的教學想法開始</div></div>
+          <div class="card stat"><small>法規資料狀態</small><strong>尚未建立知識庫</strong><div class="stat-note">需匯入官方文件並建立版本紀錄</div></div>
+          <div class="card stat"><small>資料使用方式</small><strong>個人瀏覽器儲存</strong><div class="stat-note">此原型尚無帳號與跨裝置同步</div></div>
+        </div>
+      </section>
+
+      <!-- PAGE: LIBRARY -->
+      <section class="page" id="page-library">
+        <div class="page-head"><div><div class="eyebrow">Curriculum & Regulations</div><h1>課綱與法規資料中心</h1><p>先建立可信任的官方資料入口，再逐步整理文件版本、適用範圍與條文索引，讓未來 AI 回答有根據可查。</p></div></div>
+        <div class="notice"><span class="notice-icon">ⓘ</span><div><strong>目前只提供官方入口連結，尚未匯入法規全文。</strong>開啟來源網站查詢最新公告；本頁不會自行宣稱任何法規仍然有效，也不會把搜尋摘要當作正式條文。</div></div>
+        <div class="stats">
+          <div class="card stat"><small>已整理的官方文件</small><strong id="docCount">0</strong><div class="stat-note">尚未匯入正式文件</div></div>
+          <div class="card stat"><small>待審查更新</small><strong id="pendingCount">0</strong><div class="stat-note">由使用者確認後才納入正式資料</div></div>
+          <div class="card stat"><small>資料維護原則</small><strong>AI 協助、人工作主</strong><div class="stat-note">偵測變更不等於法規已生效</div></div>
+        </div>
+        <div class="card card-pad" style="margin-bottom:18px">
+          <div class="card-title"><div><h2>官方資料來源</h2><p>建議優先使用中央主管機關與法規資料庫。</p></div><span class="pill">官方網站</span></div>
+          <div class="source-grid">
+            <article class="source-card"><div class="source-top"><div class="source-icon">▧</div><span class="pill blue">課程綱要</span></div><h3>國家教育研究院｜課程綱要</h3><p>查找十二年國民基本教育課程綱要、領域／科目課綱及相關說明。</p><a class="source-link" href="https://www.naer.edu.tw/PageSyllabus?fid=52" target="_blank" rel="noopener noreferrer">前往國家教育研究院 ↗</a></article>
+            <article class="source-card"><div class="source-top"><div class="source-icon">§</div><span class="pill gold">教育法規</span></div><h3>教育部主管法規查詢系統</h3><p>查詢教育部主管法規、法規沿革、條文內容與相關公告。</p><a class="source-link" href="https://edu.law.moe.gov.tw/" target="_blank" rel="noopener noreferrer">前往教育部法規系統 ↗</a></article>
+            <article class="source-card"><div class="source-top"><div class="source-icon">⚖</div><span class="pill gold">全國法規</span></div><h3>全國法規資料庫</h3><p>查詢中央法規、法規沿革、修正日期與生效資訊。</p><a class="source-link" href="https://law.moj.gov.tw/" target="_blank" rel="noopener noreferrer">前往全國法規資料庫 ↗</a></article>
+            <article class="source-card"><div class="source-top"><div class="source-icon">▤</div><span class="pill blue">開放資料</span></div><h3>政府資料開放平臺｜法規資料</h3><p>可評估作為後續更新偵測、資料比對的來源之一；使用前須確認資料集欄位與更新方式。</p><a class="source-link" href="https://data.gov.tw/dataset/18289" target="_blank" rel="noopener noreferrer">前往政府資料開放平臺 ↗</a></article>
+          </div>
+        </div>
+        <div class="grid two">
+          <div class="card card-pad"><div class="card-title"><div><h2>未來知識庫的資料欄位</h2><p>每份文件都應保留可追溯的來源與版本資訊。</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>欄位</th><th>用途</th></tr></thead><tbody><tr><td><b>文件名稱／主管機關</b></td><td>辨識文件與發布單位</td></tr><tr><td><b>官方網址／原始檔</b></td><td>回到原始來源核對</td></tr><tr><td><b>發布／修正日期</b></td><td>掌握文件版本沿革</td></tr><tr><td><b>施行日期</b></td><td>判斷條文何時開始適用</td></tr><tr><td><b>適用階段／範圍</b></td><td>區分國小、國中及其他對象</td></tr><tr><td><b>審核狀態／最後查核日</b></td><td>避免未審核資料被誤用</td></tr></tbody></table></div></div>
+          <div class="card card-pad"><div class="card-title"><div><h2>顧問回覆的證據標示</h2><p>正式版本應把不同性質的內容分清楚。</p></div></div><div class="saved-item"><div><strong>法規明文要求</strong><small>直接引用條文、條次及生效資訊。</small></div><span class="pill gold">官方規定</span></div><div class="saved-item"><div><strong>課綱對照分析</strong><small>說明學習重點、核心素養與課程設計的關聯。</small></div><span class="pill blue">課綱分析</span></div><div class="saved-item"><div><strong>教學專業建議</strong><small>提供教學策略，並標示這是建議而非法律義務。</small></div><span class="pill">專業建議</span></div><div class="saved-item"><div><strong>資料不足／待確認</strong><small>不確定時明確說明，不自行補出條文。</small></div><span class="pill" style="background:#fbeeed;color:#a15f59">需確認</span></div></div>
+        </div>
+      </section>
+
+      <!-- PAGE: UPDATES -->
+      <section class="page" id="page-updates">
+        <div class="page-head"><div><div class="eyebrow">Knowledge Review Workflow</div><h1>資料更新與人工審核</h1><p>採用「AI 協助發現與比對、教師確認後再更新」的方式。新版本未經審核前，不應作為正式依據。</p></div><div class="head-actions"><button class="btn primary" id="addUpdate">＋ 新增待審查資料</button></div></div>
+        <div class="notice"><span class="notice-icon">ⓘ</span><div><strong>本頁是審核流程介面，不會自動連線監測官方網站。</strong>目前由你手動登錄候選更新；日後接上 AI 與資料來源後，才可產生新舊版本差異摘要。</div></div>
+        <div class="steps">
+          <div class="step"><div class="step-num">STEP 01</div><h3>發現候選更新</h3><p>從官方網站、公告或資料集取得新版本，保留原始網址與日期。</p></div>
+          <div class="step"><div class="step-num">STEP 02</div><h3>AI 協助比對</h3><p>未來由 AI 整理修正段落、版本差異、適用對象與可能影響。</p></div>
+          <div class="step"><div class="step-num">STEP 03</div><h3>教師審核發布</h3><p>人工核對官方原文、發布日與施行日，確認後才標示為已審核。</p></div>
+        </div>
+        <div class="card card-pad" style="margin-top:18px"><div class="card-title"><div><h2>更新候選清單</h2><p>新增的項目先列為待審查；核對原始來源後才能通過。</p></div><span class="pill gold">人工覆核</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>文件／資料名稱</th><th>發布機關</th><th>日期</th><th>狀態</th><th>操作</th></tr></thead><tbody id="updatesTable"><tr><td colspan="5" class="empty">目前沒有待審查資料。按右上角「新增待審查資料」建立第一筆紀錄。</td></tr></tbody></table></div></div>
+        <div class="footer-note">審核通過只代表你已完成此原型中的人工確認紀錄，仍應以主管機關最新公告及正式法規文本為準。</div>
+      </section>
+
+      <!-- PAGE: SAVED -->
+      <section class="page" id="page-saved">
+        <div class="page-head"><div><div class="eyebrow">My Teaching Drafts</div><h1>我的教學草稿</h1><p>儲存本次教學諮詢的示範內容，方便在同一台裝置上回看與匯出。</p></div></div>
+        <div class="notice"><span class="notice-icon">ⓘ</span><div><strong>草稿只存在目前瀏覽器的 localStorage。</strong>清除瀏覽資料、換瀏覽器或換裝置後，草稿可能無法取回。此版本尚未提供登入與雲端備份。</div></div>
+        <div class="card card-pad"><div class="card-title"><div><h2>已儲存的草稿</h2><p>可以匯出文字檔留存，或刪除不需要的草稿。</p></div><span class="pill" id="draftCount">0 份</span></div><div id="draftList"><div class="empty">目前還沒有草稿。完成一次教學示範分析後，就能儲存到這裡。</div></div></div>
+        <div class="card card-pad" style="margin-top:18px"><div class="card-title"><div><h2>後續分享規劃</h2><p>依照「先個人使用，再逐步分享給其他教師」的方向。</p></div><span class="pill blue">第二階段</span></div><div class="steps"><div class="step"><div class="step-num">現在</div><h3>個人測試</h3><p>介面與操作在本機瀏覽器測試，先驗證諮詢流程。</p></div><div class="step"><div class="step-num">下一階段</div><h3>串接 AI 與知識庫</h3><p>測試免費額度、來源檢索及回覆品質，加入使用量限制。</p></div><div class="step"><div class="step-num">成熟後</div><h3>教師共用</h3><p>再評估帳號、雲端儲存、隱私政策及多人權限。</p></div></div></div>
+      </section>
+      <div class="footer-note">教學智匯 Teaching Insight Lab · 前端介面原型 · 非正式法規查詢或法律意見</div>
+    </div>
+  </main>
+</div>
+
+<!-- Add update modal -->
+<div class="modal-backdrop" id="updateModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head"><h2 id="modalTitle">新增待審查資料</h2><button class="icon-btn" id="closeModal" aria-label="關閉">×</button></div>
+    <form id="updateForm">
+      <div class="modal-body"><div class="form-grid">
+        <div class="field full"><label for="uTitle">文件／資料名稱 <span>必填</span></label><input id="uTitle" required placeholder="例如：○○課程綱要修正公告"></div>
+        <div class="field"><label for="uAgency">發布機關</label><input id="uAgency" placeholder="例如：教育部"></div>
+        <div class="field"><label for="uDate">公告／修正日期</label><input id="uDate" type="date"></div>
+        <div class="field full"><label for="uUrl">官方來源網址 <span>建議填寫</span></label><input id="uUrl" type="url" placeholder="https://..."></div>
+        <div class="field full"><label for="uNote">備註／預計確認事項</label><textarea id="uNote" placeholder="例如：需確認施行日期、適用年級及修正條文內容。"></textarea></div>
+      </div><p class="hint" style="margin:13px 0 0">新增後會先標示「待人工審查」，不會自動納入正式知識庫。</p></div>
+      <div class="modal-foot"><button type="button" class="btn" id="cancelModal">取消</button><button type="submit" class="btn primary">建立審查紀錄</button></div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const STORAGE = {updates:'teachingInsight_updates_v1', drafts:'teachingInsight_drafts_v1'};
+  let currentResult = null;
+
+  function readStore(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(_){return []}}
+  function writeStore(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch(_){toast('瀏覽器儲存空間不足，請先匯出資料。');return false}}
+  function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2600)}
+  function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function list(items){return items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}
+  function go(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+page));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));const labels={consult:'教學設計諮詢',library:'課綱與法規資料',updates:'資料更新審核',saved:'我的教學草稿'};$('crumbTitle').textContent=labels[page]||'';window.scrollTo({top:0,behavior:'smooth'});if(page==='updates')renderUpdates();if(page==='saved')renderDrafts();if(page==='library')renderCounts()}
+  document.querySelectorAll('.nav button').forEach(button=>button.addEventListener('click',()=>go(button.dataset.page)));
+
+  function getFormData(){return {stage:$('stage').value,grade:$('grade').value,subject:$('subject').value,duration:$('duration').value,topic:$('topic').value.trim(),goals:$('goals').value.trim(),context:$('context').value.trim(),idea:$('idea').value.trim(),focus:$('focus').value}}
+  function buildResult(d){
+    const topic=d.topic||'本次課程主題';
+    const goal=d.goals?d.goals.split(/[\n。；;]/).map(x=>x.trim()).filter(Boolean).slice(0,3):['能說明本課程的核心概念，並以自己的話整理重點。','能運用課堂所學完成任務，提出理由或解決策略。','能透過同儕交流與回饋，修正自己的理解。'];
+    const flow=[
+      `引起動機（約 10 分鐘）：以「${topic}」相關的生活情境、圖片或問題引發好奇，先蒐集學生原有想法。`,
+      '探究與建構（約 20–25 分鐘）：教師提供短講解或示範，學生以個人思考、同儕討論或小組任務整理關鍵概念。',
+      '應用與實作（約 15–20 分鐘）：設計一項可觀察學習表現的任務，讓學生實際運用概念並留下作品或紀錄。',
+      '統整與回饋（約 5–10 分鐘）：使用出口單、口頭分享或自評，確認學生理解並記錄下一節課需要補強之處。'
+    ];
+    if(d.duration.startsWith('1 節')) flow[1]='核心探究（約 15 分鐘）：保留一個關鍵概念與一項主要活動，避免一次安排過多任務。';
+    return {data:d,createdAt:new Date().toISOString(),title:topic,summary:`建議以「${topic}」作為情境主軸，先連結學生經驗，再安排可觀察的學習任務。這份示範規劃以${d.duration}為框架，優先處理「${d.focus}」。實際節奏仍需依教材與班級狀況調整。`,goals:goal,flow,assessment:['觀察學生能否說出關鍵概念與判斷理由，使用簡要檢核表記錄。','蒐集小組任務成果或個人學習單，依事先公布的規準提供具體回饋。','以出口單／一句話反思確認學習目標達成情形，作為下一節課調整依據。'],differentiation:d.context?`依據你提供的班級特性（${d.context}），可提供圖像化步驟卡、關鍵詞提示與分段任務；對已熟練的學生，增加比較、解釋或延伸挑戰。`: '可提供圖像、步驟卡、關鍵詞或句型支架；對已熟練的學生增加比較、解釋或延伸挑戰。'};
+  }
+  function showResult(r){
+    currentResult=r;$('resultPlaceholder').style.display='none';$('resultPanel').classList.add('show');
+    $('resultTitle').textContent=r.title+'｜教學設計建議';$('resultMeta').textContent=`${r.data.stage}・${r.data.grade}・${r.data.subject}・${r.data.duration}`;
+    $('resultSummary').textContent=r.summary;$('resultGoals').innerHTML=list(r.goals);$('resultFlow').innerHTML=list(r.flow);$('resultAssessment').innerHTML=list(r.assessment);$('resultDifferentiation').textContent=r.differentiation;
+  }
+  $('consultForm').addEventListener('submit',e=>{e.preventDefault();const data=getFormData();if(!data.topic){$('topic').focus();return}showResult(buildResult(data));toast('已產生示範分析。這不是 AI 即時回覆。')});
+  $('fillDemo').addEventListener('click',()=>{$('stage').value='國中';$('grade').value='七年級';$('subject').value='自然科學';$('duration').value='2 節（90 分鐘）';$('topic').value='從生活垃圾認識循環經濟';$('goals').value='能辨識常見回收標誌，並說明分類的理由。\n能根據生活情境提出減少一次性用品的做法。';$('context').value='28 人；學生程度差異較大，部分學生需要圖像提示與分段指令。';$('idea').value='希望以校園垃圾分類照片作為引起動機，安排小組分類任務，最後讓學生提出一項班級減塑行動。';$('focus').value='完整規劃教學流程';toast('已填入示範案例')});
+  $('clearForm').addEventListener('click',()=>{$('consultForm').reset();$('resultPanel').classList.remove('show');$('resultPlaceholder').style.display='flex';currentResult=null;toast('表單已清空')});
+
+  function resultToText(r){return [`教學主題：${r.title}`,`教育階段：${r.data.stage} ${r.data.grade}`,`領域／科目：${r.data.subject}`,`課程節數：${r.data.duration}`,`諮詢重點：${r.data.focus}`,'','教學方向摘要',r.summary,'','建議學習目標',...r.goals.map((x,i)=>`${i+1}. ${x}`),'','課堂流程建議',...r.flow.map((x,i)=>`${i+1}. ${x}`),'','評量與回饋',...r.assessment.map((x,i)=>`${i+1}. ${x}`),'','差異化與支持策略',r.differentiation,'','課綱／法規提醒：正式使用前須檢索適用課綱與現行法規，核對條文、條次及施行日期。','注意：本內容由前端示範邏輯產生，非 AI 分析或正式法規意見。'].join('\n')}
+  function downloadText(filename,text){const blob=new Blob([text],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url)}
+  $('exportResult').addEventListener('click',()=>{if(!currentResult)return;downloadText('教學設計示範_'+currentResult.title+'.txt',resultToText(currentResult));toast('已開始匯出文字檔')});
+  $('saveDraft').addEventListener('click',()=>{if(!currentResult)return;const drafts=readStore(STORAGE.drafts);drafts.unshift({...currentResult,id:Date.now()});if(writeStore(STORAGE.drafts,drafts)){toast('草稿已儲存在這台裝置');renderDrafts()}});
+
+  function renderDrafts(){const drafts=readStore(STORAGE.drafts);$('draftCount').textContent=`${drafts.length} 份`;$('draftList').innerHTML=drafts.length?drafts.map(d=>`<div class="saved-item"><div><strong>${escapeHtml(d.title)}</strong><small>${escapeHtml(d.data.stage)} ${escapeHtml(d.data.grade)} · ${escapeHtml(d.data.subject)} · ${new Date(d.createdAt).toLocaleString('zh-TW')}</small></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn small" data-export="${d.id}">匯出</button><button class="btn small danger" data-delete="${d.id}">刪除</button></div></div>`).join(''):'<div class="empty">目前還沒有草稿。完成一次教學示範分析後，就能儲存到這裡。</div>';
+    $('draftList').querySelectorAll('[data-export]').forEach(b=>b.addEventListener('click',()=>{const d=drafts.find(x=>String(x.id)===b.dataset.export);if(d)downloadText('教學設計_'+d.title+'.txt',resultToText(d))}));
+    $('draftList').querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(!confirm('確定刪除此份草稿？'))return;writeStore(STORAGE.drafts,drafts.filter(x=>String(x.id)!==b.dataset.delete));renderDrafts();toast('草稿已刪除')}));
+  }
+
+  function openModal(){$('updateModal').classList.add('open');$('uTitle').focus()}
+  function closeModal(){$('updateModal').classList.remove('open')}
+  $('addUpdate').addEventListener('click',openModal);$('closeModal').addEventListener('click',closeModal);$('cancelModal').addEventListener('click',closeModal);$('updateModal').addEventListener('click',e=>{if(e.target===$('updateModal'))closeModal()});
+  $('updateForm').addEventListener('submit',e=>{e.preventDefault();const rows=readStore(STORAGE.updates);const url=$('uUrl').value.trim();if(url&&!/^https?:\/\//i.test(url)){toast('網址請以 http:// 或 https:// 開頭');return}rows.unshift({id:Date.now(),title:$('uTitle').value.trim(),agency:$('uAgency').value.trim()||'未填寫',date:$('uDate').value||'未填寫',url,note:$('uNote').value.trim(),status:'pending',createdAt:new Date().toISOString()});if(writeStore(STORAGE.updates,rows)){e.target.reset();closeModal();renderUpdates();renderCounts();toast('已建立待人工審查紀錄')}});
+  function renderUpdates(){const rows=readStore(STORAGE.updates);$('updatesTable').innerHTML=rows.length?rows.map(r=>`<tr><td><b>${escapeHtml(r.title)}</b>${r.url?`<br><a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer" style="color:#3f827c">開啟來源 ↗</a>`:''}${r.note?`<br><span style="color:#849391">${escapeHtml(r.note)}</span>`:''}</td><td>${escapeHtml(r.agency)}</td><td>${escapeHtml(r.date)}</td><td><span class="status ${r.status==='approved'?'approved':'pending'}">${r.status==='approved'?'已人工確認':'待人工審查'}</span></td><td>${r.status==='pending'?`<button class="btn small soft" data-approve="${r.id}">標記已確認</button> `:''}<button class="btn small danger" data-remove="${r.id}">刪除</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">目前沒有待審查資料。按右上角「新增待審查資料」建立第一筆紀錄。</td></tr>';
+    $('updatesTable').querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click',()=>{const data=readStore(STORAGE.updates);const item=data.find(x=>String(x.id)===b.dataset.approve);if(!item)return;if(!confirm('請確認你已核對官方原始文件、發布日期與施行日期。確定標記為已人工確認？'))return;item.status='approved';item.reviewedAt=new Date().toISOString();writeStore(STORAGE.updates,data);renderUpdates();renderCounts();toast('已記錄人工確認狀態')}));
+    $('updatesTable').querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{if(!confirm('確定刪除此筆紀錄？'))return;writeStore(STORAGE.updates,readStore(STORAGE.updates).filter(x=>String(x.id)!==b.dataset.remove));renderUpdates();renderCounts();toast('紀錄已刪除')}));
+  }
+  function renderCounts(){const rows=readStore(STORAGE.updates);$('pendingCount').textContent=rows.filter(x=>x.status==='pending').length;$('docCount').textContent=rows.filter(x=>x.status==='approved').length}
+  renderUpdates();renderCounts();renderDrafts();
+})();
+</script>
+</body>
+</html>
