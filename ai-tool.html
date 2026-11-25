@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>研習互動看板 - 最常使用的工具調查</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- D3.js and D3-Cloud -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ivory: {
+              50: '#FDFCFA',
+              100: '#F9F7F3',
+              200: '#F0ECE4',
+              300: '#E5DFD3',
+            },
+            ink: {
+              600: '#2B547E',
+              700: '#1E3A5F',
+              800: '#162C49',
+              900: '#0F1E33',
+            },
+            forest: {
+              50: '#ECFDF5',
+              100: '#D1FAE5',
+              600: '#0F766E',
+              700: '#0D5E58',
+              800: '#115E59',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+
+    html {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+      background-color: #F9F7F3;
+      background-image: radial-gradient(circle at 10% 0%, #EFECE4 0%, #F9F7F3 45%, #F5F2EB 100%);
+      color: #1E293B;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .paper-card {
+      background: #FFFFFF;
+      border: 1.5px solid #E5DFD3;
+      box-shadow: 0 10px 28px -12px rgba(22, 44, 73, 0.12), 0 2px 6px -2px rgba(22, 44, 73, 0.05);
+    }
+
+    /* 自訂捲軸 */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F0ECE4;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+
+    .touch-btn {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-800 selection:bg-ink-700 selection:text-white">
+
+  <!-- 頂部導航列 -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-2 border-ivory-300 px-3 sm:px-6 lg:px-8 py-3 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+      <!-- 品牌與標題 -->
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-ink-700 to-forest-600 flex items-center justify-center shadow-md flex-shrink-0">
+            <i class="fa-solid fa-chalkboard-user text-white text-lg"></i>
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-base sm:text-xl font-black tracking-tight text-ink-900 truncate" id="header-title">
+              AI 工具研習即時互動看板
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 flex items-center gap-2 font-medium">
+              <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-forest-600 opacity-60"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-forest-600"></span>
+              </span>
+              <span>已累計 <strong id="total-badge" class="text-ink-700 font-black">0</strong> 筆回饋</span>
+              <span id="last-sync-time" class="hidden sm:inline text-xs text-slate-500"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模式切換與操作按鈕（手機／平板友善排版） -->
+      <div class="flex flex-wrap items-center justify-between lg:justify-end gap-2">
+        <!-- 視圖切換器 -->
+        <div class="bg-ivory-200 p-1 rounded-xl border border-ivory-300 flex flex-1 sm:flex-none">
+          <button id="nav-btn-form" onclick="switchView('form')" class="touch-btn flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 bg-ink-700 text-white shadow-sm">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>學員填寫</span>
+          </button>
+          <button id="nav-btn-result" onclick="switchView('result')" class="touch-btn flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-ink-900">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>視覺化結果看板</span>
+          </button>
+        </div>
+
+        <!-- 工具操作按鈕 -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="fetchRecordsFromGAS(false)" class="touch-btn px-3 py-2 rounded-xl bg-white hover:bg-ivory-100 border border-slate-300 text-xs sm:text-sm font-bold text-ink-700 transition flex items-center gap-1.5 shadow-sm" title="立即同步雲端資料">
+            <i class="fa-solid fa-rotate" id="refresh-icon"></i>
+            <span>同步</span>
+          </button>
+          <button onclick="openDriveExportModal()" class="touch-btn px-3 py-2 rounded-xl bg-forest-50 hover:bg-forest-100 border border-forest-600/30 text-xs sm:text-sm font-bold text-forest-800 transition flex items-center gap-1.5 shadow-sm" title="匯出 CSV 或 JSON 備份">
+            <i class="fa-brands fa-google-drive"></i>
+            <span class="hidden sm:inline">匯出備份</span>
+          </button>
+          <button onclick="toggleQuickDemoData()" class="touch-btn px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-xs sm:text-sm font-bold text-amber-800 transition flex items-center gap-1.5 shadow-sm" title="加入一筆測試示範資料">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span class="hidden md:inline">示範數據</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容容器 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
+
+    <!-- ==================== 視圖 1: 學員填寫頁面 ==================== -->
+    <div id="view-form" class="transition-all duration-300">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+
+        <!-- 左側：填寫表單 -->
+        <div class="lg:col-span-7 paper-card rounded-2xl p-5 sm:p-7">
+          <div class="mb-5 pb-4 border-b border-ivory-200">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-forest-50 text-forest-700 border border-forest-600/25 inline-flex items-center gap-1.5 mb-2.5">
+              <i class="fa-solid fa-signal"></i> 研習即時互動問卷
+            </span>
+            <!-- 講師可點擊標題修改關鍵字 -->
+            <h2 id="main-question-title" onclick="changeTopicKeyword()" class="text-xl sm:text-3xl font-black tracking-tight text-ink-900 cursor-pointer hover:text-ink-600 transition group flex flex-wrap items-center gap-2" title="講師點擊即可修改調查主題關鍵字">
+              <span>您最常使用哪款 <span id="keyword-text" class="text-forest-600 underline decoration-dashed underline-offset-4">AI 工具</span>？</span>
+              <i class="fa-solid fa-pen-to-square text-sm opacity-40 group-hover:opacity-100 text-ink-600 transition"></i>
+            </h2>
+            <p class="text-slate-600 text-sm sm:text-base mt-1.5">點選下方分類標籤或直接輸入，送出後立即呈現在大螢幕文字雲！</p>
+          </div>
+
+          <form id="submission-form" onsubmit="handleFormSubmit(event)" class="space-y-5">
+            <!-- 姓名 / 暱稱 -->
+            <div>
+              <label for="student-name" class="block text-sm font-bold text-slate-700 mb-1.5">
+                您的暱稱或組別 <span class="text-slate-400 font-normal">(選填)</span>
+              </label>
+              <input type="text" id="student-name" autocomplete="nickname" placeholder="例如：第 3 組 小陳"
+                class="w-full px-4 py-3 rounded-xl bg-ivory-50 border-2 border-ivory-300 focus:border-ink-700 focus:bg-white focus:ring-2 focus:ring-ink-700/15 text-ink-900 placeholder-slate-400 text-base outline-none transition">
+            </div>
+
+            <!-- 最常用工具 / 分類頁籤快捷區 -->
+            <div>
+              <label for="ai-tool" class="block text-sm font-bold text-slate-700 mb-1.5 flex flex-wrap justify-between items-center gap-1">
+                <span id="input-label-text">最常使用的 AI 工具名稱 <span class="text-rose-600">*</span></span>
+                <!-- 隱藏管理員 5 連擊清空觸發點 -->
+                <span class="text-xs font-semibold text-forest-700 cursor-pointer hover:underline select-none" onclick="handleSecretClick()">點選下方分類或直接輸入</span>
+              </label>
+
+              <input type="text" id="ai-tool" required placeholder="請點選下方選項，或自行輸入工具名稱..."
+                class="w-full px-4 py-3.5 rounded-xl bg-ivory-50 border-2 border-ivory-300 focus:border-ink-700 focus:bg-white focus:ring-2 focus:ring-ink-700/15 text-ink-900 placeholder-slate-400 text-base font-bold outline-none transition">
+
+              <!-- 方案 A：多分類頁籤切換區 -->
+              <div class="mt-4 p-3.5 sm:p-4 rounded-xl bg-ivory-100 border border-ivory-300">
+                <div class="flex items-center justify-between mb-2.5">
+                  <span class="text-xs sm:text-sm font-bold text-ink-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-forest-600"></i>
+                    切換分類快速點選：
+                  </span>
+                </div>
+
+                <!-- 分類頁籤按鈕列 -->
+                <div id="category-tabs" class="flex flex-wrap gap-2 mb-3.5" role="tablist">
+                  <!-- 由 JS 動態產生五個分類頁籤 -->
+                </div>
+
+                <!-- 該分類下的快捷項目 -->
+                <div class="pt-3 border-t border-ivory-300/80">
+                  <span id="quick-preset-label" class="text-xs font-semibold text-slate-500 block mb-2">💡 點一下即可自動填入：</span>
+                  <div class="flex flex-wrap gap-2" id="quick-preset-chips">
+                    <!-- 由 JS 動態產生項目按鈕 -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 應用場景 / 短評 -->
+            <div>
+              <label for="ai-usage" class="block text-sm font-bold text-slate-700 mb-1.5">
+                主要應用場景或一句短評 <span class="text-slate-400 font-normal">(選填，例：備課簡報、寫公文)</span>
+              </label>
+              <input type="text" id="ai-usage" placeholder="例如：輔助備課做簡報、整理會議重點、還沒開始用但想學"
+                class="w-full px-4 py-3 rounded-xl bg-ivory-50 border-2 border-ivory-300 focus:border-ink-700 focus:bg-white focus:ring-2 focus:ring-ink-700/15 text-ink-900 placeholder-slate-400 text-base outline-none transition">
+            </div>
+
+            <!-- 送出按鈕 -->
+            <button type="submit" id="submit-btn" class="touch-btn w-full py-4 px-6 rounded-xl bg-gradient-to-r from-ink-700 to-forest-600 hover:from-ink-800 hover:to-forest-700 text-white font-black text-base sm:text-lg shadow-lg shadow-ink-700/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2.5">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span id="submit-btn-text">立即送出並查看大螢幕結果</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 右側：即時動態與講師小提示 -->
+        <div class="lg:col-span-5 space-y-5">
+          <!-- 即時播報動態 -->
+          <div class="paper-card rounded-2xl p-5 sm:p-6">
+            <div class="flex items-center justify-between pb-3 border-b border-ivory-200 mb-4">
+              <h3 class="font-black text-base text-ink-900 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-600"></i>
+                學員最新填寫動態
+              </h3>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-forest-50 text-forest-700 border border-forest-600/25">即時串流</span>
+            </div>
+
+            <div id="live-stream-list" class="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+              <!-- 動態產生 -->
+            </div>
+          </div>
+
+          <!-- 研習講師操作提示卡 -->
+          <div class="paper-card rounded-2xl p-5 border-l-4 border-l-forest-600 bg-forest-50/40">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-lg bg-forest-100 border border-forest-600/20 flex items-center justify-center flex-shrink-0 text-forest-700">
+                <i class="fa-solid fa-lightbulb text-base"></i>
+              </div>
+              <div class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                <h4 class="font-black text-ink-900 mb-1">大禮堂投影與講師提示</h4>
+                <p>切換至上方 <strong class="text-ink-700">「視覺化結果看板」</strong> 後，可開啟 <strong class="text-forest-700">「自動同步」</strong> 與 <strong class="text-ink-700">「全螢幕」</strong>，現場學員送出後大螢幕會自動更新文字雲。</p>
+                <p class="text-xs text-slate-500 mt-1.5">※ 講師小密技：在表單內「點選下方分類或直接輸入」文字上快速連點 5 下，可一鍵清空後端測試資料。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== 視圖 2: 視覺化結果看板（投影最佳化） ==================== -->
+    <div id="view-result" class="hidden flex-1 flex flex-col space-y-5">
+
+      <!-- 控制列：自動同步開關、重排、全螢幕 -->
+      <div class="paper-card rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+          <div class="p-3 rounded-xl bg-ink-700 text-white shadow-sm flex-shrink-0">
+            <i class="fa-solid fa-chart-simple text-xl"></i>
+          </div>
+          <div>
+            <h2 id="result-board-title" class="text-xl sm:text-2xl font-black text-ink-900">AI 工具聲量視覺化看板</h2>
+            <p class="text-xs sm:text-sm text-slate-600 font-medium">票數越多字體越大且越集中，點擊任一詞彙可篩選對應短評</p>
+          </div>
+        </div>
+
+        <div class="flex items-center flex-wrap gap-2">
+          <!-- 大銀幕自動定時同步開關 -->
+          <button id="auto-sync-btn" onclick="toggleAutoSync()" class="touch-btn px-4 py-2.5 rounded-xl bg-ivory-100 hover:bg-ivory-200 border-2 border-slate-300 text-sm font-bold text-slate-700 flex items-center gap-2 transition shadow-sm">
+            <span id="auto-sync-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+            <span id="auto-sync-label">自動同步：關閉</span>
+          </button>
+
+          <button onclick="renderAllResults()" class="touch-btn px-3.5 py-2.5 rounded-xl bg-white hover:bg-ivory-100 text-sm font-bold border-2 border-ivory-300 text-ink-800 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>重排文字雲</span>
+          </button>
+
+          <button onclick="toggleFullScreen()" class="touch-btn px-3.5 py-2.5 rounded-xl bg-ink-700 hover:bg-ink-800 text-sm font-bold text-white flex items-center gap-1.5 transition shadow-sm">
+            <i class="fa-solid fa-expand" id="fullscreen-icon"></i>
+            <span id="fullscreen-text">投影全螢幕</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 統計數據條（高對比大字體，適合後排閱讀） -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="paper-card rounded-xl p-4 sm:p-5 border-l-[6px] border-l-ink-700">
+          <span class="text-xs sm:text-sm text-slate-600 block font-bold">總參與回饋人次</span>
+          <span id="stat-total-votes" class="text-3xl sm:text-4xl font-black text-ink-900 mt-1 block">0</span>
+        </div>
+        <div class="paper-card rounded-xl p-4 sm:p-5 border-l-[6px] border-l-forest-600">
+          <span id="stat-unique-label" class="text-xs sm:text-sm text-slate-600 block font-bold">提及項目種類</span>
+          <span id="stat-unique-tools" class="text-3xl sm:text-4xl font-black text-forest-700 mt-1 block">0 種</span>
+        </div>
+        <div class="paper-card rounded-xl p-4 sm:p-5 border-l-[6px] border-l-amber-600">
+          <span class="text-xs sm:text-sm text-slate-600 block font-bold">目前榜首項目</span>
+          <span id="stat-top-tool" class="text-xl sm:text-2xl font-black text-amber-700 mt-1.5 truncate block">尚無資料</span>
+        </div>
+        <div class="paper-card rounded-xl p-4 sm:p-5 border-l-[6px] border-l-rose-700">
+          <span class="text-xs sm:text-sm text-slate-600 block font-bold">榜首得票佔比</span>
+          <span id="stat-top-percent" class="text-3xl sm:text-4xl font-black text-rose-700 mt-1 block">0%</span>
+        </div>
+      </div>
+
+      <!-- 核心視覺化區域 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+        <!-- 左側：文字雲主舞台 -->
+        <div class="lg:col-span-8 paper-card rounded-2xl p-4 sm:p-5 flex flex-col relative overflow-hidden min-h-[380px] sm:min-h-[480px] lg:min-h-[540px]">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-ivory-200 mb-2">
+            <span class="text-sm sm:text-base font-black text-ink-900 flex items-center gap-2">
+              <i class="fa-solid fa-cloud text-ink-700"></i>
+              即時聲量文字雲
+            </span>
+            <span id="current-selected-label" class="text-xs sm:text-sm font-bold text-forest-700">點擊詞彙可查看該項目票數與心得</span>
+          </div>
+
+          <div id="wordcloud-container" class="flex-1 w-full relative flex items-center justify-center min-h-[320px] sm:min-h-[400px]">
+            <div id="wordcloud-loading" class="text-center text-slate-500">
+              <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-2 text-ink-700"></i>
+              <p class="text-sm font-bold">文字雲計算中...</p>
+            </div>
+            <div id="wordcloud-svg-wrapper" class="w-full h-full flex items-center justify-center"></div>
+          </div>
+
+          <div class="mt-2 pt-2.5 border-t border-ivory-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 font-semibold">
+            <span class="flex flex-wrap items-center gap-3">
+              <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-ink-700 inline-block"></span> 特大深藍：票數領先</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-forest-600 inline-block"></span> 中型翠綠／深色：常用項目</span>
+            </span>
+            <span class="text-slate-500">投影最佳化高對比模式</span>
+          </div>
+        </div>
+
+        <!-- 右側：排行榜 + 學員心得 -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          <!-- 票數排行 -->
+          <div class="paper-card rounded-2xl p-5 flex flex-col max-h-[340px]">
+            <div class="flex items-center justify-between pb-3 border-b border-ivory-200 mb-3">
+              <h3 class="text-base font-black text-ink-900 flex items-center gap-2">
+                <i class="fa-solid fa-ranking-star text-amber-600"></i>
+                票數排行統計
+              </h3>
+              <span class="text-xs font-bold text-slate-500">點擊可篩選</span>
+            </div>
+            <div id="rank-list" class="space-y-2.5 overflow-y-auto pr-1 flex-1"></div>
+          </div>
+
+          <!-- 學員心得 -->
+          <div class="paper-card rounded-2xl p-5 flex flex-col flex-1 min-h-[240px]">
+            <div class="flex items-center justify-between pb-3 border-b border-ivory-200 mb-3">
+              <h3 class="text-base font-black text-ink-900 flex items-center gap-2">
+                <i class="fa-solid fa-comment-dots text-forest-600"></i>
+                學員心得與應用
+              </h3>
+              <button onclick="clearDetailFilter()" id="clear-filter-btn" class="hidden touch-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-ink-700 text-white hover:bg-ink-800">
+                顯示全部
+              </button>
+            </div>
+            <div id="feedback-notes-list" class="space-y-2.5 overflow-y-auto pr-1 flex-1 max-h-[280px]"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 匯出與還原 Modal -->
+  <div id="drive-modal" class="fixed inset-0 z-50 bg-ink-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white border-2 border-ivory-300 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative">
+      <button onclick="closeDriveExportModal()" class="touch-btn absolute right-4 top-4 w-9 h-9 rounded-lg bg-ivory-100 hover:bg-ivory-200 text-slate-600 hover:text-ink-900 flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5 pr-8">
+        <div class="w-11 h-11 rounded-xl bg-forest-50 text-forest-700 border border-forest-600/25 flex items-center justify-center flex-shrink-0">
+          <i class="fa-brands fa-google-drive text-xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-black text-ink-900">匯出與備份研習資料</h3>
+          <p class="text-xs sm:text-sm text-slate-600">下載試算表 CSV 或 JSON 備份檔永久保存</p>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div class="p-4 rounded-xl bg-ivory-100 border border-ivory-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="font-bold text-ink-900 flex items-center gap-2">
+              <i class="fa-solid fa-file-csv text-forest-700"></i>
+              匯出 Excel / Google 試算表 (CSV)
+            </h4>
+            <p class="text-xs text-slate-600 mt-0.5">含完整 UTF-8 編碼，開啟不亂碼</p>
+          </div>
+          <button onclick="exportToCSV()" class="touch-btn px-4 py-2.5 bg-forest-600 hover:bg-forest-700 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 flex-shrink-0">
+            <i class="fa-solid fa-download"></i> 下載 CSV
+          </button>
+        </div>
+
+        <div class="p-4 rounded-xl bg-ivory-100 border border-ivory-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="font-bold text-ink-900 flex items-center gap-2">
+              <i class="fa-solid fa-file-code text-ink-700"></i>
+              下載結構化備份檔 (JSON)
+            </h4>
+            <p class="text-xs text-slate-600 mt-0.5">下次研習可直接匯入還原畫面</p>
+          </div>
+          <button onclick="exportToJSON()" class="touch-btn px-4 py-2.5 bg-ink-700 hover:bg-ink-800 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 flex-shrink-0">
+            <i class="fa-solid fa-download"></i> 下載 JSON
+          </button>
+        </div>
+
+        <div class="p-4 rounded-xl bg-ivory-50 border-2 border-dashed border-ivory-300">
+          <label class="block text-xs sm:text-sm font-bold text-ink-900 mb-2">
+            <i class="fa-solid fa-file-import mr-1 text-ink-700"></i>
+            從 JSON 備份檔還原資料：
+          </label>
+          <input type="file" id="import-file-input" accept=".json" onchange="importDataFromFile(event)"
+            class="block w-full text-xs sm:text-sm text-slate-600 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-ink-700 file:text-white hover:file:bg-ink-800 cursor-pointer">
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeDriveExportModal()" class="touch-btn px-5 py-2.5 rounded-xl bg-ivory-200 hover:bg-ivory-300 text-sm font-bold text-ink-900">
+          關閉視窗
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮動訊息提示 (Toast) -->
+  <div id="toast" class="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl pointer-events-none">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-xl flex-shrink-0"></i>
+    <span id="toast-message" class="text-sm font-bold">訊息通知</span>
+  </div>
+
+  <!-- ==================== 應用程式核心邏輯 ==================== -->
+  <script>
+    // ★ 請將下方網址換成您自己部署的 Google Apps Script 網頁應用程式網址（結尾為 /exec）
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxNJF1nkc3PRV_Y7-URaopBl79wt1Dcae05hewB57RyR0yMHC4ImTb5GyhvnCCY-jo_lQ/exec";
+
+    // 多主題熱門快捷資料庫（含新增之「都沒用過」分類）
+    const PRESET_CATEGORIES = {
+      "AI 工具": ["ChatGPT", "Claude", "Midjourney", "Gemini", "Copilot", "Perplexity", "Notion AI", "Suno", "Canva AI", "Stable Diffusion", "Gamma", "Runway", "Cursor"],
+      "數位工具": ["ChatGPT", "Google Gemini", "Poe AI", "Claude", "Perplexity", "Canva", "Notion", "Slack", "Trello", "Miro", "Figma", "GoodNotes"],
+      "教學軟體": ["Kahoot!", "Padlet", "Quizizz", "Google Classroom", "Canva", "Mentimeter", "Wordwall", "ClassDojo", "Nearpod", "Loom"],
+      "程式語言": ["Python", "JavaScript", "Java", "C++", "HTML/CSS", "TypeScript", "PHP", "SQL", "Rust", "Go", "Swift", "Kotlin"],
+      "都沒用過": ["完全沒用過", "聽過但沒用過", "想學還沒開始"]
+    };
+
+    const CATEGORY_ICONS = {
+      "AI 工具": "fa-robot",
+      "數位工具": "fa-laptop-code",
+      "教學軟體": "fa-chalkboard",
+      "程式語言": "fa-code",
+      "都沒用過": "fa-seedling"
+    };
+
+    // 應用程式狀態
+    let state = {
+      currentView: 'form',
+      records: [],
+      filterTool: null,
+      currentKeyword: "AI 工具",
+      activeCategory: "AI 工具",
+      autoSyncEnabled: false,
+      autoSyncIntervalId: null,
+      lastDataSignature: ""
+    };
+
+    let clickCount = 0;
+    let clickTimer = null;
+
+    function isGASConfigured() {
+      return GAS_WEB_APP_URL && GAS_WEB_APP_URL.startsWith("https://script.google.com/");
+    }
+
+    // 計算資料簽章（用來判斷背景自動同步時資料是否有變化，避免無謂閃爍）
+    function computeDataSignature(records) {
+      if (!records || records.length === 0) return "empty";
+      const counts = {};
+      records.forEach(r => { counts[r.tool] = (counts[r.tool] || 0) + 1; });
+      return `${records.length}|${records[0].timestamp}|${JSON.stringify(counts)}`;
+    }
+
+    // 變更主調查標題關鍵字（講師選用）
+    function changeTopicKeyword() {
+      const newKeyword = prompt("請輸入新的調查主題關鍵字（例如：AI 工具、數位工具、教學軟體）：", state.currentKeyword);
+      if (!newKeyword || !newKeyword.trim()) return;
+
+      const trimmedKeyword = newKeyword.trim();
+      state.currentKeyword = trimmedKeyword;
+
+      if (PRESET_CATEGORIES[trimmedKeyword]) {
+        state.activeCategory = trimmedKeyword;
+      }
+
+      updateThemeUI();
+      showToast(`已變更調查主題為：「${trimmedKeyword}」`, 'success');
+    }
+
+    // 更新標題與分類 UI
+    function updateThemeUI() {
+      const kw = state.currentKeyword;
+      document.getElementById('keyword-text').textContent = kw;
+      document.getElementById('header-title').textContent = `${kw}研習即時互動看板`;
+      document.getElementById('input-label-text').innerHTML = `最常使用的 ${escapeHTML(kw)} 名稱 <span class="text-rose-600">*</span>`;
+      document.getElementById('result-board-title').textContent = `${kw} 聲量視覺化看板`;
+      document.getElementById('stat-unique-label').textContent = `提及項目種類`;
+
+      renderCategoryTabs();
+      renderPresetChips();
+    }
+
+    // 渲染五個分類頁籤（方案 A）
+    function renderCategoryTabs() {
+      const tabContainer = document.getElementById('category-tabs');
+      tabContainer.innerHTML = '';
+
+      Object.keys(PRESET_CATEGORIES).forEach(catName => {
+        const isActive = state.activeCategory === catName;
+        const isUnusedCat = catName === "都沒用過";
+        const iconClass = CATEGORY_ICONS[catName] || "fa-tag";
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+
+        let styleClass = '';
+        if (isActive) {
+          styleClass = isUnusedCat
+            ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+            : 'bg-ink-700 text-white border-ink-800 shadow-sm';
+        } else {
+          styleClass = isUnusedCat
+            ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+            : 'bg-white hover:bg-ivory-200 text-slate-700 border-ivory-300';
+        }
+
+        btn.className = `touch-btn min-h-[40px] px-3.5 py-2 rounded-xl border text-sm font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 ${styleClass}`;
+        btn.innerHTML = `<i class="fa-solid ${iconClass} text-xs"></i><span>${escapeHTML(catName)}</span>`;
+        btn.onclick = () => {
+          state.activeCategory = catName;
+          renderCategoryTabs();
+          renderPresetChips();
+        };
+        tabContainer.appendChild(btn);
+      });
+    }
+
+    // 渲染目前所選分類的快捷選項按鈕
+    function renderPresetChips() {
+      const container = document.getElementById('quick-preset-chips');
+      const label = document.getElementById('quick-preset-label');
+      const inputVal = document.getElementById('ai-tool').value.trim();
+      const items = PRESET_CATEGORIES[state.activeCategory] || [];
+
+      label.textContent = `💡 「${state.activeCategory}」快速點選（點一下即填入）：`;
+      container.innerHTML = '';
+
+      items.forEach(tool => {
+        const isSelected = inputVal === tool;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `touch-btn min-h-[40px] text-sm font-bold px-3.5 py-2 rounded-xl border transition cursor-pointer active:scale-95 ${
+          isSelected
+            ? 'bg-forest-600 text-white border-forest-700 shadow-sm'
+            : 'bg-white hover:bg-forest-50 border-slate-300 hover:border-forest-600 text-ink-900'
+        }`;
+        btn.textContent = isSelected ? `✓ ${tool}` : `+ ${tool}`;
+        btn.onclick = () => {
+          document.getElementById('ai-tool').value = tool;
+          renderPresetChips();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    // 監聽手動輸入時同步取消按鈕高亮
+    document.addEventListener('DOMContentLoaded', () => {
+      const toolInput = document.getElementById('ai-tool');
+      if (toolInput) {
+        toolInput.addEventListener('input', () => renderPresetChips());
+      }
+    });
+
+    // 隱藏 5 連擊清空後端資料
+    function handleSecretClick() {
+      document.getElementById('ai-tool').focus();
+      clickCount++;
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(() => { clickCount = 0; }, 3000);
+
+      if (clickCount >= 5) {
+        clickCount = 0;
+        confirmClearAllBackendData();
+      }
+    }
+
+    async function confirmClearAllBackendData() {
+      const isConfirmed = confirm("⚠️ 警告：您即將清空所有學員填寫紀錄（包含 Google 試算表後端資料）！\n\n確定要全部清空嗎？（此動作不可復原）");
+      if (!isConfirmed) return;
+
+      if (isGASConfigured()) {
+        showToast("正在清空雲端試算表資料...", "info");
+        try {
+          await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: "clear" })
+          });
+        } catch (err) {
+          console.error("清空失敗:", err);
+          showToast("清空後端資料時發生錯誤", "error");
+          return;
+        }
+      }
+
+      state.records = [];
+      state.filterTool = null;
+      state.lastDataSignature = "empty";
+      updateAllStats();
+      renderLiveStream();
+      renderAllResults();
+      showToast("🧹 已順利清空所有紀錄！", "success");
+    }
+
+    // 自動定時同步開關（每 5 秒同步一次）
+    function toggleAutoSync() {
+      if (!isGASConfigured()) {
+        showToast("尚未設定 Google Apps Script 網址，請先完成後端部署", "error");
+        return;
+      }
+
+      state.autoSyncEnabled = !state.autoSyncEnabled;
+      const btn = document.getElementById('auto-sync-btn');
+      const dot = document.getElementById('auto-sync-dot');
+      const label = document.getElementById('auto-sync-label');
+
+      if (state.autoSyncEnabled) {
+        btn.className = "touch-btn px-4 py-2.5 rounded-xl bg-forest-50 hover:bg-forest-100 border-2 border-forest-600 text-sm font-bold text-forest-800 flex items-center gap-2 transition shadow-sm";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-forest-600 animate-ping";
+        label.textContent = "自動同步：開啟 (5秒)";
+        showToast("已開啟大螢幕自動同步（每 5 秒更新）", "success");
+
+        fetchRecordsFromGAS(true);
+        state.autoSyncIntervalId = setInterval(() => {
+          fetchRecordsFromGAS(true);
+        }, 5000);
+      } else {
+        clearInterval(state.autoSyncIntervalId);
+        state.autoSyncIntervalId = null;
+        btn.className = "touch-btn px-4 py-2.5 rounded-xl bg-ivory-100 hover:bg-ivory-200 border-2 border-slate-300 text-sm font-bold text-slate-700 flex items-center gap-2 transition shadow-sm";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-slate-400";
+        label.textContent = "自動同步：關閉";
+        showToast("已暫停自動同步", "info");
+      }
+    }
+
+    // 頁面載入初始化
+    window.onload = function() {
+      updateThemeUI();
+      updateAllStats();
+      renderLiveStream();
+      renderAllResults();
+      if (isGASConfigured()) {
+        fetchRecordsFromGAS(false);
+      } else {
+        showToast("目前為單機預覽模式（填入 GAS 網址後即可多人即時同步）", "info");
+      }
+    };
+
+    // 從 Google Apps Script 讀取雲端資料
+    async function fetchRecordsFromGAS(isSilent = false) {
+      if (!isGASConfigured()) {
+        if (!isSilent) showToast("尚未設定 Google Apps Script 網址，請先於程式碼中貼上部署網址", "error");
+        return;
+      }
+
+      const refreshIcon = document.getElementById('refresh-icon');
+      if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+      try {
+        // 加上時間戳避免瀏覽器快取舊資料
+        const urlWithCacheBust = `${GAS_WEB_APP_URL}${GAS_WEB_APP_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
+        const response = await fetch(urlWithCacheBust, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          let rawList = [];
+
+          if (Array.isArray(data)) rawList = data;
+          else if (data && Array.isArray(data.records)) rawList = data.records;
+          else if (data && Array.isArray(data.data)) rawList = data.data;
+
+          const parsedRecords = rawList.map((item, index) => {
+            const rawName = item.name || item.studentName || item['暱稱'] || item['姓名'] || '匿名學員';
+            const rawTool = item.tool || item.aiTool || item['最常用工具'] || item['最常用AI工具'] || '';
+            const rawUsage = item.usage || item.aiUsage || item['主要應用'] || item['短評'] || '日常研習與工作輔助';
+            const rawTime = item.timestamp || item.time || item['填寫時間'] || Date.now();
+
+            return {
+              id: item.id || String(index + 1),
+              name: String(rawName),
+              tool: normalizeToolName(String(rawTool)),
+              usage: String(rawUsage),
+              timestamp: isNaN(new Date(rawTime).getTime()) ? Date.now() : new Date(rawTime).getTime()
+            };
+          }).filter(r => r.tool.trim() !== '');
+
+          parsedRecords.sort((a, b) => b.timestamp - a.timestamp);
+
+          // 更新最後同步時間文字
+          const syncTimeEl = document.getElementById('last-sync-time');
+          if (syncTimeEl) {
+            const nowStr = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+            syncTimeEl.textContent = `・最後同步 ${nowStr}`;
+          }
+
+          const newSignature = computeDataSignature(parsedRecords);
+          const hasChanged = newSignature !== state.lastDataSignature;
+
+          state.records = parsedRecords;
+          state.lastDataSignature = newSignature;
+
+          // 只有資料真的變動，或是手動點擊同步時，才重繪文字雲（避免自動同步閃爍）
+          if (hasChanged || !isSilent) {
+            updateAllStats();
+            renderLiveStream();
+            renderAllResults();
+          }
+
+          if (!isSilent) {
+            if (state.records.length > 0) {
+              showToast(`已同步最新 ${state.records.length} 筆回饋資料！`, 'success');
+            } else {
+              showToast('雲端試算表目前尚無填寫紀錄', 'info');
+            }
+          }
+        } else if (!isSilent) {
+          showToast('無法取得雲端資料，請確認 GAS 部署權限', 'error');
+        }
+      } catch (error) {
+        console.error('讀取 GAS 發生錯誤:', error);
+        if (!isSilent) {
+          showToast('連線雲端失敗，請確認 Apps Script 存取權限已設為「所有人」', 'error');
+        }
+      } finally {
+        if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+      }
+    }
+
+    function switchView(viewName) {
+      state.currentView = viewName;
+      const formView = document.getElementById('view-form');
+      const resultView = document.getElementById('view-result');
+      const btnForm = document.getElementById('nav-btn-form');
+      const btnResult = document.getElementById('nav-btn-result');
+
+      if (viewName === 'form') {
+        formView.classList.remove('hidden');
+        resultView.classList.add('hidden');
+        btnForm.className = "touch-btn flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 bg-ink-700 text-white shadow-sm";
+        btnResult.className = "touch-btn flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-ink-900";
+      } else {
+        formView.classList.add('hidden');
+        resultView.classList.remove('hidden');
+        btnResult.className = "touch-btn flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 bg-ink-700 text-white shadow-sm";
+        btnForm.className = "touch-btn flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-ink-900";
+        setTimeout(renderAllResults, 60);
+      }
+    }
+
+    // 處理表單送出
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById('submit-btn');
+      const submitBtnText = document.getElementById('submit-btn-text');
+      const nameInput = document.getElementById('student-name');
+      const toolInput = document.getElementById('ai-tool');
+      const usageInput = document.getElementById('ai-usage');
+
+      const toolVal = toolInput.value.trim();
+      if (!toolVal) return;
+
+      const normalizedTool = normalizeToolName(toolVal);
+      const studentName = nameInput.value.trim() || `學員 ${Math.floor(Math.random() * 899 + 100)}`;
+      const usageVal = usageInput.value.trim() || '日常研習與工作輔助';
+
+      const payload = {
+        name: studentName,
+        tool: normalizedTool,
+        usage: usageVal,
+        timestamp: new Date().toISOString()
+      };
+
+      submitBtn.disabled = true;
+      submitBtnText.textContent = '資料傳送中...';
+
+      try {
+        if (isGASConfigured()) {
+          await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const newRecord = {
+          id: Date.now().toString(),
+          name: studentName,
+          tool: normalizedTool,
+          usage: usageVal,
+          timestamp: Date.now()
+        };
+        state.records.unshift(newRecord);
+        state.lastDataSignature = computeDataSignature(state.records);
+
+        toolInput.value = '';
+        usageInput.value = '';
+        renderPresetChips();
+
+        showToast(
+          isGASConfigured()
+            ? `🎉 送出成功！「${normalizedTool}」已同步至大螢幕`
+            : `✅ 已加入本機預覽：「${normalizedTool}」`,
+          'success'
+        );
+
+        updateAllStats();
+        renderLiveStream();
+        renderAllResults();
+
+        if (isGASConfigured()) {
+          setTimeout(() => fetchRecordsFromGAS(true), 1500);
+        }
+        setTimeout(() => { switchView('result'); }, 650);
+
+      } catch (err) {
+        console.error('儲存失敗：', err);
+        showToast('雲端連線異常，已先記錄於目前畫面', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtnText.textContent = '立即送出並查看大螢幕結果';
+      }
+    }
+
+    function normalizeToolName(name) {
+      if (!name) return '';
+      const lower = name.toLowerCase().trim();
+      if (lower === 'chatgpt' || lower === 'chat gpt' || lower === 'gpt') return 'ChatGPT';
+      if (lower === 'claude' || lower === 'claude 3' || lower === 'claude 3.5') return 'Claude';
+      if (lower === 'midjourney' || lower === 'mj') return 'Midjourney';
+      if (lower === 'gemini' || lower === 'bard') return 'Gemini';
+      if (lower === 'copilot' || lower === 'github copilot') return 'Copilot';
+      return name.trim();
+    }
+
+    function getAggregatedData() {
+      const counts = {};
+      state.records.forEach(r => {
+        if (r.tool) counts[r.tool] = (counts[r.tool] || 0) + 1;
+      });
+      return Object.entries(counts)
+        .map(([text, value]) => ({ text, value }))
+        .sort((a, b) => b.value - a.value);
+    }
+
+    function updateAllStats() {
+      const agg = getAggregatedData();
+      const totalVotes = state.records.length;
+
+      document.getElementById('total-badge').textContent = totalVotes;
+      document.getElementById('stat-total-votes').textContent = totalVotes;
+      document.getElementById('stat-unique-tools').textContent = `${agg.length} 種`;
+
+      if (agg.length > 0) {
+        const top = agg[0];
+        document.getElementById('stat-top-tool').textContent = `${top.text} (${top.value}票)`;
+        const pct = Math.round((top.value / (totalVotes || 1)) * 100);
+        document.getElementById('stat-top-percent').textContent = `${pct}%`;
+      } else {
+        document.getElementById('stat-top-tool').textContent = '尚無資料';
+        document.getElementById('stat-top-percent').textContent = '0%';
+      }
+    }
+
+    function renderLiveStream() {
+      const streamContainer = document.getElementById('live-stream-list');
+      streamContainer.innerHTML = '';
+
+      if (state.records.length === 0) {
+        streamContainer.innerHTML = `<p class="text-sm text-slate-500 py-8 text-center font-medium">目前尚無填寫資料，歡迎成為第一位參與者！</p>`;
+        return;
+      }
+
+      state.records.slice(0, 12).forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'p-3.5 rounded-xl bg-ivory-50 border border-ivory-300 flex items-start justify-between gap-2.5';
+        const timeAgo = formatTimeAgo(r.timestamp);
+
+        item.innerHTML = `
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm text-ink-900 truncate">${escapeHTML(r.name)}</span>
+              <span class="text-xs text-slate-500 flex-shrink-0">• ${timeAgo}</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-600 mt-1 break-words">「${escapeHTML(r.usage)}」</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-ink-700/10 text-ink-800 border border-ink-700/20 flex-shrink-0">
+            ${escapeHTML(r.tool)}
+          </span>
+        `;
+        streamContainer.appendChild(item);
+      });
+    }
+
+    function renderAllResults() {
+      updateAllStats();
+      renderWordCloud();
+      renderRankList();
+      renderFeedbackNotes();
+    }
+
+    // 投影高對比文字雲渲染（修正白底色票與懸停位移問題）
+    function renderWordCloud() {
+      const wrapper = document.getElementById('wordcloud-svg-wrapper');
+      const loading = document.getElementById('wordcloud-loading');
+
+      const words = getAggregatedData();
+      if (words.length === 0) {
+        wrapper.innerHTML = `<div class="text-center py-12"><i class="fa-solid fa-cloud text-4xl text-ivory-300 mb-3"></i><p class="text-slate-500 text-base font-bold">目前尚無數據，等待學員填寫或點擊上方「示範數據」</p></div>`;
+        loading.classList.add('hidden');
+        return;
+      }
+
+      loading.classList.remove('hidden');
+      wrapper.innerHTML = '';
+
+      const container = document.getElementById('wordcloud-container');
+      const width = Math.max(container.clientWidth || 600, 300);
+      const height = Math.max(container.clientHeight || 420, 320);
+
+      const maxVal = d3.max(words, d => d.value) || 1;
+      const isCompactScreen = width < 480;
+      const minFont = isCompactScreen ? 16 : 22;
+      const maxFont = isCompactScreen ? Math.min(width / 6.5, 48) : Math.min(width / 6.5, 82);
+
+      const fontScale = d3.scaleSqrt()
+        .domain([0, maxVal])
+        .range([minFont, maxFont]);
+
+      // 白底／米白底專用高對比深色色票（大禮堂投影極清晰）
+      const colorScale = d3.scaleOrdinal()
+        .range([
+          '#0F766E', // 森林翠綠
+          '#B45309', // 暖琥珀棕
+          '#1D4ED8', // 皇家深藍
+          '#9F1239', // 寶石酒紅
+          '#4338CA', // 靛藍紫
+          '#15803D', // 深草綠
+          '#C2410C', // 赤陶橘
+          '#334155'  // 深岩灰
+        ]);
+
+      const topWord = words[0]?.text;
+
+      const layout = d3.layout.cloud()
+        .size([width, height])
+        .words(words.map((d, idx) => ({
+          text: d.text,
+          size: fontScale(d.value),
+          value: d.value,
+          isTop: d.text === topWord,
+          color: d.text === topWord ? '#162C49' : colorScale(idx)
+        })))
+        .padding(isCompactScreen ? 6 : 10)
+        .rotate(() => 0)
+        .font('Noto Sans TC, Plus Jakarta Sans, sans-serif')
+        .fontSize(d => d.size)
+        .spiral('archimedean')
+        .on('end', draw);
+
+      layout.start();
+
+      function draw(computedWords) {
+        loading.classList.add('hidden');
+
+        const svg = d3.select('#wordcloud-svg-wrapper')
+          .append('svg')
+          .attr('width', '100%')
+          .attr('height', '100%')
+          .attr('viewBox', `0 0 ${width} ${height}`)
+          .attr('class', 'overflow-visible');
+
+        const g = svg.append('g')
+          .attr('transform', `translate(${width / 2}, ${height / 2})`);
+
+        // 柔和的中心輔助圓環
+        g.append('circle')
+          .attr('r', Math.min(width, height) * 0.25)
+          .attr('fill', 'none')
+          .attr('stroke', 'rgba(30, 58, 95, 0.10)')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', '6 6');
+
+        const texts = g.selectAll('text')
+          .data(computedWords)
+          .enter()
+          .append('text')
+          .style('font-family', 'inherit')
+          .style('font-weight', d => d.isTop ? '900' : (d.value > 1 ? '800' : '700'))
+          .style('fill', d => d.color)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('transform', d => `translate(${d.x}, ${d.y}) scale(1)`)
+          .attr('font-size', d => `${d.size}px`)
+          .text(d => d.text)
+          .attr('class', 'cursor-pointer select-none')
+          .style('opacity', 0);
+
+        texts.transition()
+          .duration(450)
+          .style('opacity', 1);
+
+        texts
+          .on('mouseover', function(event, d) {
+            d3.select(this)
+              .transition().duration(150)
+              .attr('transform', `translate(${d.x}, ${d.y}) scale(1.12)`)
+              .style('fill', '#0F766E');
+            const pct = Math.round((d.value / (state.records.length || 1)) * 100);
+            document.getElementById('current-selected-label').textContent = `🔍 ${d.text}：共 ${d.value} 票 (${pct}%)`;
+          })
+          .on('mouseout', function(event, d) {
+            d3.select(this)
+              .transition().duration(150)
+              .attr('transform', `translate(${d.x}, ${d.y}) scale(1)`)
+              .style('fill', d.color);
+          })
+          .on('click', function(event, d) {
+            filterByTool(d.text);
+          });
+      }
+    }
+
+    function filterByTool(toolName) {
+      state.filterTool = toolName;
+      const agg = getAggregatedData();
+      const found = agg.find(a => a.text === toolName);
+      const votesText = found ? `（${found.value} 票）` : '';
+
+      document.getElementById('clear-filter-btn').classList.remove('hidden');
+      document.getElementById('current-selected-label').textContent = `📌 已篩選：${toolName}${votesText}`;
+      renderRankList();
+      renderFeedbackNotes();
+    }
+
+    function clearDetailFilter() {
+      state.filterTool = null;
+      document.getElementById('clear-filter-btn').classList.add('hidden');
+      document.getElementById('current-selected-label').textContent = '點擊詞彙可查看該項目票數與心得';
+      renderRankList();
+      renderFeedbackNotes();
+    }
+
+    function renderRankList() {
+      const container = document.getElementById('rank-list');
+      container.innerHTML = '';
+      const list = getAggregatedData();
+      const maxVotes = list[0]?.value || 1;
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-500 py-6 text-center font-medium">尚無投票排名</p>`;
+        return;
+      }
+
+      list.forEach((item, index) => {
+        const pct = Math.round((item.value / maxVotes) * 100);
+        const isLeader = index === 0;
+        const isSelected = state.filterTool === item.text;
+
+        const row = document.createElement('div');
+        row.className = `touch-btn p-3 rounded-xl border-2 transition cursor-pointer flex flex-col gap-2 ${
+          isSelected
+            ? 'bg-forest-50 border-forest-600'
+            : 'bg-ivory-50 border-ivory-200 hover:border-ink-700/40'
+        }`;
+        row.onclick = () => filterByTool(item.text);
+
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-sm sm:text-base">
+            <span class="font-black flex items-center gap-2 min-w-0 ${isLeader ? 'text-ink-900' : 'text-slate-800'}">
+              <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${isLeader ? 'bg-amber-500 text-white' : 'bg-ivory-300 text-ink-800'}">${index + 1}</span>
+              <span class="truncate">${escapeHTML(item.text)}</span>
+              ${isLeader ? '<i class="fa-solid fa-crown text-xs text-amber-500 flex-shrink-0"></i>' : ''}
+            </span>
+            <span class="font-black text-ink-700 flex-shrink-0 ml-2">${item.value} 票</span>
+          </div>
+          <div class="w-full h-2.5 bg-ivory-200 rounded-full overflow-hidden">
+            <div class="h-full rounded-full ${isLeader ? 'bg-gradient-to-r from-ink-700 to-forest-600' : 'bg-slate-400'}" style="width: ${pct}%"></div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function renderFeedbackNotes() {
+      const container = document.getElementById('feedback-notes-list');
+      container.innerHTML = '';
+
+      let notes = state.records;
+      if (state.filterTool) {
+        notes = notes.filter(r => r.tool.toLowerCase() === state.filterTool.toLowerCase());
+      }
+
+      if (notes.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-500 py-6 text-center font-medium">目前尚無心得資料</p>`;
+        return;
+      }
+
+      notes.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'p-3.5 rounded-xl bg-ivory-50 border border-ivory-300 text-sm';
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span class="font-bold text-ink-900 truncate">${escapeHTML(r.name)}</span>
+            <span class="px-2.5 py-0.5 rounded-md text-xs bg-ink-700 text-white font-bold flex-shrink-0">
+              ${escapeHTML(r.tool)}
+            </span>
+          </div>
+          <p class="text-slate-700 leading-relaxed break-words">${escapeHTML(r.usage)}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // 支援平板旋轉與視窗縮放自動重畫文字雲
+    let resizeTimer;
+    function handleViewportChange() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (state.currentView === 'result') {
+          renderWordCloud();
+        }
+      }, 280);
+    }
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('orientationchange', handleViewportChange);
+
+    // 加入示範測試資料（跨五分類抽樣）
+    function toggleQuickDemoData() {
+      const sampleNames = ['第1組 林老師', '教務處 廖組長', '自然科 柯老師', '輔導室 陳老師', '資訊組 王老師'];
+      const samplePool = [
+        'ChatGPT', 'Gemini', 'Canva', 'Kahoot!', 'Padlet',
+        'Python', 'Claude', '完全沒用過', '聽過但沒用過', '想學還沒開始'
+      ];
+      const sampleUsages = ['輔助備課與簡報大綱', '課堂即時互動測驗', '協助整理會議紀錄', '平常還沒接觸過，今天來學習！'];
+
+      const rName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
+      const rTool = samplePool[Math.floor(Math.random() * samplePool.length)];
+      const rUsage = sampleUsages[Math.floor(Math.random() * sampleUsages.length)];
+
+      state.records.unshift({
+        id: Date.now().toString(),
+        name: rName,
+        tool: rTool,
+        usage: rUsage,
+        timestamp: Date.now()
+      });
+      state.lastDataSignature = computeDataSignature(state.records);
+
+      showToast(`已加入測試資料：「${rName}」→ ${rTool}`, 'info');
+      updateAllStats();
+      renderLiveStream();
+      renderAllResults();
+    }
+
+    // 投影全螢幕切換
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          showToast(`此裝置不支援自動全螢幕，請按 F11 切換`, 'info');
+        });
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const icon = document.getElementById('fullscreen-icon');
+      const text = document.getElementById('fullscreen-text');
+      if (document.fullscreenElement) {
+        icon.className = 'fa-solid fa-compress';
+        text.textContent = '離開全螢幕';
+      } else {
+        icon.className = 'fa-solid fa-expand';
+        text.textContent = '投影全螢幕';
+      }
+      setTimeout(() => {
+        if (state.currentView === 'result') renderWordCloud();
+      }, 200);
+    });
+
+    function openDriveExportModal() {
+      document.getElementById('drive-modal').classList.remove('hidden');
+    }
+    function closeDriveExportModal() {
+      document.getElementById('drive-modal').classList.add('hidden');
+    }
+
+    function exportToCSV() {
+      if (state.records.length === 0) {
+        showToast('目前尚無資料可匯出', 'error');
+        return;
+      }
+      let csvContent = `\uFEFF填寫時間,學員稱呼,最常用項目,主要應用心得與場景\n`;
+      state.records.forEach(r => {
+        const timeStr = new Date(r.timestamp).toLocaleString('zh-TW');
+        const nameStr = `"${(r.name || '').replace(/"/g, '""')}"`;
+        const toolStr = `"${(r.tool || '').replace(/"/g, '""')}"`;
+        const usageStr = `"${(r.usage || '').replace(/"/g, '""')}"`;
+        csvContent += `${timeStr},${nameStr},${toolStr},${usageStr}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `研習互動統計_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('CSV 試算表檔案已下載！', 'success');
+    }
+
+    function exportToJSON() {
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        keyword: state.currentKeyword,
+        records: state.records
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `研習資料備份_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('JSON 備份檔已下載！', 'success');
+    }
+
+    function importDataFromFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed.records)) state.records = parsed.records;
+          else if (Array.isArray(parsed)) state.records = parsed;
+          else throw new Error('格式錯誤');
+
+          if (parsed.keyword) {
+            state.currentKeyword = parsed.keyword;
+            updateThemeUI();
+          }
+          state.lastDataSignature = computeDataSignature(state.records);
+          updateAllStats();
+          renderLiveStream();
+          renderAllResults();
+          closeDriveExportModal();
+          showToast(`🎉 成功還原 ${state.records.length} 筆研習紀錄！`, 'success');
+        } catch (err) {
+          showToast('匯入失敗：檔案格式不正確', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function formatTimeAgo(ts) {
+      const diffMs = Date.now() - ts;
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return '剛剛';
+      if (mins < 60) return `${mins} 分鐘前`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs} 小時前`;
+      return `${Math.floor(hrs / 24)} 天前`;
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    let toastTimeout;
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-message');
+      const iconEl = document.getElementById('toast-icon');
+
+      clearTimeout(toastTimeout);
+      msgEl.textContent = message;
+
+      const baseClass = 'fixed bottom-5 left-4 right-4 sm:left-auto sm:right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl transition-all duration-300 font-bold';
+      if (type === 'success') {
+        toast.className = `${baseClass} bg-forest-700 text-white`;
+        iconEl.className = 'fa-solid fa-circle-check text-lg flex-shrink-0';
+      } else if (type === 'error') {
+        toast.className = `${baseClass} bg-rose-700 text-white`;
+        iconEl.className = 'fa-solid fa-triangle-exclamation text-lg flex-shrink-0';
+      } else {
+        toast.className = `${baseClass} bg-ink-800 text-white`;
+        iconEl.className = 'fa-solid fa-circle-info text-lg flex-shrink-0';
+      }
+
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+
+      toastTimeout = setTimeout(() => {
+        toast.style.transform = 'translateY(6rem)';
+        toast.style.opacity = '0';
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
