@@ -11,6 +11,8 @@
   <!-- D3.js and D3-Cloud -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
+  <!-- Rounded QR Code Styling Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 
   <script>
     tailwind.config = {
@@ -61,6 +63,16 @@
       background: #FFFFFF;
       border: 1.5px solid #E5DFD3;
       box-shadow: 0 10px 28px -12px rgba(22, 44, 73, 0.12), 0 2px 6px -2px rgba(22, 44, 73, 0.05);
+    }
+
+    /* 確保圓角 QR Code 在手機與大禮堂螢幕都能自適應清晰縮放 */
+    #qr-code-canvas canvas,
+    #qr-code-canvas svg {
+      width: 100% !important;
+      height: auto !important;
+      max-width: 340px;
+      display: block;
+      margin: 0 auto;
     }
 
     /* 自訂捲軸 */
@@ -127,7 +139,11 @@
         </div>
 
         <!-- 工具操作按鈕 -->
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center flex-wrap gap-1.5">
+          <button onclick="openQRModal()" class="touch-btn px-3 py-2 rounded-xl bg-ink-700 hover:bg-ink-800 border border-ink-800 text-xs sm:text-sm font-bold text-white transition flex items-center gap-1.5 shadow-sm" title="顯示大螢幕圓角 QR Code 供學員掃描">
+            <i class="fa-solid fa-qrcode"></i>
+            <span>活動 QR Code</span>
+          </button>
           <button onclick="fetchRecordsFromGAS(false)" class="touch-btn px-3 py-2 rounded-xl bg-white hover:bg-ivory-100 border border-slate-300 text-xs sm:text-sm font-bold text-ink-700 transition flex items-center gap-1.5 shadow-sm" title="立即同步雲端資料">
             <i class="fa-solid fa-rotate" id="refresh-icon"></i>
             <span>同步</span>
@@ -216,7 +232,7 @@
               <label for="ai-usage" class="block text-sm font-bold text-slate-700 mb-1.5">
                 主要應用場景或一句短評 <span class="text-slate-400 font-normal">(選填，例：備課簡報、寫公文)</span>
               </label>
-              <input type="text" id="ai-usage" placeholder="例如：輔助備課做簡報、整理會議重點、還沒開始用但想學"
+              <input type="text" id="ai-usage" placeholder="例如：輔助備課做簡報、課堂派題練習、還沒開始用但想學"
                 class="w-full px-4 py-3 rounded-xl bg-ivory-50 border-2 border-ivory-300 focus:border-ink-700 focus:bg-white focus:ring-2 focus:ring-ink-700/15 text-ink-900 placeholder-slate-400 text-base outline-none transition">
             </div>
 
@@ -253,7 +269,7 @@
               </div>
               <div class="text-xs sm:text-sm text-slate-700 leading-relaxed">
                 <h4 class="font-black text-ink-900 mb-1">大禮堂投影與講師提示</h4>
-                <p>切換至上方 <strong class="text-ink-700">「視覺化結果看板」</strong> 後，可開啟 <strong class="text-forest-700">「自動同步」</strong> 與 <strong class="text-ink-700">「全螢幕」</strong>，現場學員送出後大螢幕會自動更新文字雲。</p>
+                <p>點選上方 <strong class="text-ink-700">「活動 QR Code」</strong> 可放大投影讓學員掃碼；切至 <strong class="text-ink-700">「視覺化結果看板」</strong> 並開啟 <strong class="text-forest-700">「自動同步」</strong>，現場填寫就會即時更新大螢幕。</p>
                 <p class="text-xs text-slate-500 mt-1.5">※ 講師小密技：在表單內「點選下方分類或直接輸入」文字上快速連點 5 下，可一鍵清空後端測試資料。</p>
               </div>
             </div>
@@ -380,8 +396,52 @@
 
   </main>
 
-  <!-- 匯出與還原 Modal -->
-  <div id="drive-modal" class="fixed inset-0 z-50 bg-ink-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <!-- ==================== 活動圓角 QR Code 投影視窗 Modal ==================== -->
+  <div id="qr-modal" onclick="handleModalBackdropClick(event, 'qr-modal', closeQRModal)" class="fixed inset-0 z-50 bg-ink-900/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white border-2 border-ivory-300 rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative text-center">
+      <button onclick="closeQRModal()" class="touch-btn absolute right-4 top-4 w-10 h-10 rounded-xl bg-ivory-100 hover:bg-ivory-200 text-slate-600 hover:text-ink-900 flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-50 border border-forest-600/25 text-forest-700 text-xs sm:text-sm font-bold mb-3">
+        <i class="fa-solid fa-mobile-screen-button"></i>
+        <span>請開啟手機相機掃描加入互動</span>
+      </div>
+
+      <h3 id="qr-modal-title" class="text-2xl sm:text-3xl font-black text-ink-900 tracking-tight mb-1.5">
+        研習即時互動問卷
+      </h3>
+      <p class="text-sm text-slate-600 font-medium mb-5">掃描後即可直接點選常用工具並同步至大螢幕</p>
+
+      <!-- 圓角 QR Code 展示區 -->
+      <div class="p-4 sm:p-5 rounded-3xl bg-white border-2 border-ivory-300 shadow-inner inline-block w-full max-w-[360px] mx-auto">
+        <div id="qr-code-canvas" class="w-full flex items-center justify-center"></div>
+      </div>
+
+      <!-- 網址顯示列 -->
+      <div class="mt-4 px-3.5 py-2.5 rounded-xl bg-ivory-100 border border-ivory-300 text-xs sm:text-sm font-mono font-semibold text-ink-800 break-all select-all">
+        https://arthur0921-maker.github.io/teaching-insight/ai-tool.html
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+        <button onclick="copyActivityUrl()" class="touch-btn w-full sm:w-auto px-4 py-2.5 rounded-xl bg-forest-600 hover:bg-forest-700 text-white text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+          <i class="fa-regular fa-copy"></i>
+          <span>複製活動網址</span>
+        </button>
+        <button onclick="downloadQRCode()" class="touch-btn w-full sm:w-auto px-4 py-2.5 rounded-xl bg-ink-700 hover:bg-ink-800 text-white text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+          <i class="fa-solid fa-download"></i>
+          <span>下載圓角 QR 圖片</span>
+        </button>
+        <button onclick="closeQRModal()" class="touch-btn w-full sm:w-auto px-4 py-2.5 rounded-xl bg-ivory-200 hover:bg-ivory-300 text-ink-900 text-sm font-bold transition">
+          關閉
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 匯出與還原 Modal ==================== -->
+  <div id="drive-modal" onclick="handleModalBackdropClick(event, 'drive-modal', closeDriveExportModal)" class="fixed inset-0 z-50 bg-ink-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div class="bg-white border-2 border-ivory-300 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative">
       <button onclick="closeDriveExportModal()" class="touch-btn absolute right-4 top-4 w-9 h-9 rounded-lg bg-ivory-100 hover:bg-ivory-200 text-slate-600 hover:text-ink-900 flex items-center justify-center">
         <i class="fa-solid fa-xmark text-lg"></i>
@@ -450,14 +510,17 @@
 
   <!-- ==================== 應用程式核心邏輯 ==================== -->
   <script>
-    // ★ 請將下方網址換成您自己部署的 Google Apps Script 網頁應用程式網址（結尾為 /exec）
+    // 活動公開網址（用於產生圓角 QR Code）
+    const ACTIVITY_URL = "https://arthur0921-maker.github.io/teaching-insight/ai-tool.html";
+
+    // 已設定您的專屬 Google Apps Script 網頁應用程式網址
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxNJF1nkc3PRV_Y7-URaopBl79wt1Dcae05hewB57RyR0yMHC4ImTb5GyhvnCCY-jo_lQ/exec";
 
-    // 多主題熱門快捷資料庫（含新增之「都沒用過」分類）
+    // 多主題熱門快捷資料庫（已更新為「教學網站」並新增學習吧、因材網、Cool English、pagamo，以及「都沒用過」）
     const PRESET_CATEGORIES = {
       "AI 工具": ["ChatGPT", "Claude", "Midjourney", "Gemini", "Copilot", "Perplexity", "Notion AI", "Suno", "Canva AI", "Stable Diffusion", "Gamma", "Runway", "Cursor"],
       "數位工具": ["ChatGPT", "Google Gemini", "Poe AI", "Claude", "Perplexity", "Canva", "Notion", "Slack", "Trello", "Miro", "Figma", "GoodNotes"],
-      "教學軟體": ["Kahoot!", "Padlet", "Quizizz", "Google Classroom", "Canva", "Mentimeter", "Wordwall", "ClassDojo", "Nearpod", "Loom"],
+      "教學網站": ["學習吧", "因材網", "Cool English", "pagamo", "Kahoot!", "Padlet", "Quizizz", "Google Classroom", "Canva", "Mentimeter", "Wordwall", "ClassDojo", "Nearpod", "Loom"],
       "程式語言": ["Python", "JavaScript", "Java", "C++", "HTML/CSS", "TypeScript", "PHP", "SQL", "Rust", "Go", "Swift", "Kotlin"],
       "都沒用過": ["完全沒用過", "聽過但沒用過", "想學還沒開始"]
     };
@@ -465,7 +528,7 @@
     const CATEGORY_ICONS = {
       "AI 工具": "fa-robot",
       "數位工具": "fa-laptop-code",
-      "教學軟體": "fa-chalkboard",
+      "教學網站": "fa-globe",
       "程式語言": "fa-code",
       "都沒用過": "fa-seedling"
     };
@@ -484,12 +547,105 @@
 
     let clickCount = 0;
     let clickTimer = null;
+    let qrCodeInstance = null;
 
     function isGASConfigured() {
       return GAS_WEB_APP_URL && GAS_WEB_APP_URL.startsWith("https://script.google.com/");
     }
 
-    // 計算資料簽章（用來判斷背景自動同步時資料是否有變化，避免無謂閃爍）
+    // ==================== 圓角 QR Code 功能 ====================
+    function initRoundedQRCode() {
+      const container = document.getElementById('qr-code-canvas');
+      if (!container) return;
+
+      if (typeof QRCodeStyling !== 'undefined') {
+        container.innerHTML = '';
+        qrCodeInstance = new QRCodeStyling({
+          width: 360,
+          height: 360,
+          type: "canvas",
+          data: ACTIVITY_URL,
+          margin: 12,
+          qrOptions: {
+            errorCorrectionLevel: "M"
+          },
+          dotsOptions: {
+            color: "#162C49",
+            type: "rounded"
+          },
+          cornersSquareOptions: {
+            color: "#0F766E",
+            type: "extra-rounded"
+          },
+          cornersDotOptions: {
+            color: "#162C49",
+            type: "dot"
+          },
+          backgroundOptions: {
+            color: "#FFFFFF"
+          }
+        });
+        qrCodeInstance.append(container);
+      } else {
+        // 備援顯示（若外部腳本載入受阻）
+        container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=10&color=162C49&bgcolor=FFFFFF&data=${encodeURIComponent(ACTIVITY_URL)}" alt="活動 QR Code" class="mx-auto rounded-2xl w-full max-w-[320px]">`;
+      }
+    }
+
+    function openQRModal() {
+      document.getElementById('qr-modal-title').textContent = `${state.currentKeyword} 即時互動問卷`;
+      document.getElementById('qr-modal').classList.remove('hidden');
+      if (!qrCodeInstance) {
+        initRoundedQRCode();
+      }
+    }
+
+    function closeQRModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    async function copyActivityUrl() {
+      try {
+        await navigator.clipboard.writeText(ACTIVITY_URL);
+        showToast("已複製活動網址，可直接貼給學員！", "success");
+      } catch (err) {
+        const tempInput = document.createElement('input');
+        tempInput.value = ACTIVITY_URL;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showToast("已複製活動網址！", "success");
+      }
+    }
+
+    function downloadQRCode() {
+      if (qrCodeInstance) {
+        qrCodeInstance.download({
+          name: `研習互動看板_圓角QRCode`,
+          extension: "png"
+        });
+        showToast("圓角 QR Code 圖片已開始下載！", "success");
+      } else {
+        showToast("QR Code 尚在載入中，請稍後再試", "info");
+      }
+    }
+
+    function handleModalBackdropClick(event, modalId, closeFn) {
+      if (event.target.id === modalId) {
+        closeFn();
+      }
+    }
+
+    // 支援 ESC 鍵關閉彈窗
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeQRModal();
+        closeDriveExportModal();
+      }
+    });
+
+    // ==================== 資料簽章與核心功能 ====================
     function computeDataSignature(records) {
       if (!records || records.length === 0) return "empty";
       const counts = {};
@@ -499,7 +655,7 @@
 
     // 變更主調查標題關鍵字（講師選用）
     function changeTopicKeyword() {
-      const newKeyword = prompt("請輸入新的調查主題關鍵字（例如：AI 工具、數位工具、教學軟體）：", state.currentKeyword);
+      const newKeyword = prompt("請輸入新的調查主題關鍵字（例如：AI 工具、數位工具、教學網站）：", state.currentKeyword);
       if (!newKeyword || !newKeyword.trim()) return;
 
       const trimmedKeyword = newKeyword.trim();
@@ -591,7 +747,7 @@
       });
     }
 
-    // 監聽手動輸入時同步取消按鈕高亮
+    // 監聽手動輸入時同步按鈕高亮
     document.addEventListener('DOMContentLoaded', () => {
       const toolInput = document.getElementById('ai-tool');
       if (toolInput) {
@@ -681,15 +837,13 @@
       renderAllResults();
       if (isGASConfigured()) {
         fetchRecordsFromGAS(false);
-      } else {
-        showToast("目前為單機預覽模式（填入 GAS 網址後即可多人即時同步）", "info");
       }
     };
 
     // 從 Google Apps Script 讀取雲端資料
     async function fetchRecordsFromGAS(isSilent = false) {
       if (!isGASConfigured()) {
-        if (!isSilent) showToast("尚未設定 Google Apps Script 網址，請先於程式碼中貼上部署網址", "error");
+        if (!isSilent) showToast("尚未設定 Google Apps Script 網址", "error");
         return;
       }
 
@@ -697,7 +851,6 @@
       if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
       try {
-        // 加上時間戳避免瀏覽器快取舊資料
         const urlWithCacheBust = `${GAS_WEB_APP_URL}${GAS_WEB_APP_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
         const response = await fetch(urlWithCacheBust, {
           method: 'GET',
@@ -729,7 +882,6 @@
 
           parsedRecords.sort((a, b) => b.timestamp - a.timestamp);
 
-          // 更新最後同步時間文字
           const syncTimeEl = document.getElementById('last-sync-time');
           if (syncTimeEl) {
             const nowStr = new Date().toLocaleTimeString('zh-TW', { hour12: false });
@@ -742,7 +894,6 @@
           state.records = parsedRecords;
           state.lastDataSignature = newSignature;
 
-          // 只有資料真的變動，或是手動點擊同步時，才重繪文字雲（避免自動同步閃爍）
           if (hasChanged || !isSilent) {
             updateAllStats();
             renderLiveStream();
@@ -840,12 +991,7 @@
         usageInput.value = '';
         renderPresetChips();
 
-        showToast(
-          isGASConfigured()
-            ? `🎉 送出成功！「${normalizedTool}」已同步至大螢幕`
-            : `✅ 已加入本機預覽：「${normalizedTool}」`,
-          'success'
-        );
+        showToast(`🎉 送出成功！「${normalizedTool}」已同步至大螢幕`, 'success');
 
         updateAllStats();
         renderLiveStream();
@@ -873,6 +1019,8 @@
       if (lower === 'midjourney' || lower === 'mj') return 'Midjourney';
       if (lower === 'gemini' || lower === 'bard') return 'Gemini';
       if (lower === 'copilot' || lower === 'github copilot') return 'Copilot';
+      if (lower === 'cool english' || lower === 'coolenglish') return 'Cool English';
+      if (lower === 'pagamo') return 'pagamo';
       return name.trim();
     }
 
@@ -942,7 +1090,7 @@
       renderFeedbackNotes();
     }
 
-    // 投影高對比文字雲渲染（修正白底色票與懸停位移問題）
+    // 投影高對比文字雲渲染
     function renderWordCloud() {
       const wrapper = document.getElementById('wordcloud-svg-wrapper');
       const loading = document.getElementById('wordcloud-loading');
@@ -970,7 +1118,6 @@
         .domain([0, maxVal])
         .range([minFont, maxFont]);
 
-      // 白底／米白底專用高對比深色色票（大禮堂投影極清晰）
       const colorScale = d3.scaleOrdinal()
         .range([
           '#0F766E', // 森林翠綠
@@ -1016,7 +1163,6 @@
         const g = svg.append('g')
           .attr('transform', `translate(${width / 2}, ${height / 2})`);
 
-        // 柔和的中心輔助圓環
         g.append('circle')
           .attr('r', Math.min(width, height) * 0.25)
           .attr('fill', 'none')
@@ -1170,12 +1316,12 @@
 
     // 加入示範測試資料（跨五分類抽樣）
     function toggleQuickDemoData() {
-      const sampleNames = ['第1組 林老師', '教務處 廖組長', '自然科 柯老師', '輔導室 陳老師', '資訊組 王老師'];
+      const sampleNames = ['第1組 林老師', '教務處 廖組長', '英語科 柯老師', '數學科 陳老師', '資訊組 王老師'];
       const samplePool = [
-        'ChatGPT', 'Gemini', 'Canva', 'Kahoot!', 'Padlet',
-        'Python', 'Claude', '完全沒用過', '聽過但沒用過', '想學還沒開始'
+        'ChatGPT', 'Gemini', 'Canva', '學習吧', '因材網',
+        'Cool English', 'pagamo', 'Kahoot!', '完全沒用過', '想學還沒開始'
       ];
-      const sampleUsages = ['輔助備課與簡報大綱', '課堂即時互動測驗', '協助整理會議紀錄', '平常還沒接觸過，今天來學習！'];
+      const sampleUsages = ['輔助備課與簡報大綱', '課堂即時派題與診斷測驗', '協助整理會議紀錄', '平常還沒接觸過，今天來學習！'];
 
       const rName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
       const rTool = samplePool[Math.floor(Math.random() * samplePool.length)];
@@ -1199,7 +1345,7 @@
     // 投影全螢幕切換
     function toggleFullScreen() {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
+        document.documentElement.requestFullscreen().catch(() => {
           showToast(`此裝置不支援自動全螢幕，請按 F11 切換`, 'info');
         });
       } else if (document.exitFullscreen) {
